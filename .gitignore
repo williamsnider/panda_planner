@@ -1,1 +1,7 @@
-*archive/*
+*.csv
+*.mat
+*.txt
+*.DS_store
+
+archive/collision*
+archive/kinematics*

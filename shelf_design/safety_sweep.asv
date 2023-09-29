@@ -1,0 +1,622 @@
+% Code to move the robot into the ballpark of these estimated positions
+% (will need to be verified manually)
+
+clear; close all;
+addpath("..")
+params = CustomParameters();
+
+%% Inputs
+
+
+%% Load robot
+[panda_ec, panda_sc] = loadPandaWithShape();
+env = build_collision_environment();
+
+%% Set up inverse kinematics
+ik = inverseKinematics('RigidBodyTree',panda_sc);
+ik.SolverParameters.MaxIterations = 1000;
+weights = [1 1 1 1 1 1];
+ss = manipulatorStateSpace(panda_ec); % for joint limits
+stateBounds = manipulatorStateSpace(panda_ec).StateBounds'; % for joint limits
+
+ss = ManipulatorStateSpaceSphere(panda_ec, panda_sc);
+sv = ManipulatorStateValidatorSphere(ss, env, params.validationDistance,0, params);
+sv.IgnoreSelfCollision = false;
+sv.Environment = env;
+
+%% Plot collision environment
+plotJointMotion(panda_sc, params.q_home, env, params)
+[N, M, P] = sphere(3);
+
+% Remove points at top and bottom
+idx = P>-0.99 & P<0.99;
+N = N(idx);
+M = M(idx);
+P = P(idx);
+
+
+
+dists = 0:0.01:1.0;
+
+all_s = cell(0);
+
+for j = 1:2
+
+    if j == 1
+        origin = [0,0,0.2];
+    elseif j == 2
+        origin = [0,0,-0.2];
+    end
+
+    % Reshape the matrices into vectors
+    r = 0.1;
+    x = r*N(:) + origin(1);
+    y = r*M(:) + origin(2);
+    z = r*P(:) + origin(3);
+
+    % Rotate by X degrees to align with monkey reach box
+    theta_rad = -pi/16;
+    R = [cos(theta_rad), -sin(theta_rad), 0;
+        sin(theta_rad), cos(theta_rad), 0;
+        0, 0, 1];
+
+    % Rotate the points
+    points = [x,y,z]';
+    rotated_points = R * points;
+
+    % Extract the rotated x, y, and z coordinates into individual vectors
+    x = rotated_points(1, :);
+    y = rotated_points(2, :);
+    z = rotated_points(3, :);
+    %     plot3(x,y,z,"k*")
+    %     axis equal;
+
+    for i = 1:numel(x)
+
+        xyz = [x(i), y(i), z(i)];
+        vec = (xyz-origin)/norm(xyz-origin,2);
+
+        previous_q = randomConfiguration(panda_sc);
+
+        s = struct;
+        for dist_num = 1:numel(dists)
+
+            dist = dists(dist_num);
+            new = xyz + vec*dist;
+
+            % Get pose
+            up = [0,0,1];
+
+            Tvec = cross(up, vec)/norm(cross(up,vec),2);
+            Bvec = vec;
+            Nvec = cross(Tvec,Bvec);
+
+            old_pose = eye(4);
+            old_pose(1:3, 1) = Nvec;
+            old_pose(1:3, 2) = Tvec;
+            old_pose(1:3, 3) = Bvec;
+            old_pose(1:3,4) = new;
+
+            % Rotate by 10 degrees to improve IK
+            % Given 4x4 transformation matrix "pose" and rotation axis "vec"
+            rotVec = Nvec;  % Replace with your rotation axis
+            theta = 20/180*pi;  % Angle in radians
+
+            % Step 1: Extract rotation matrix and translation vector from "pose"
+            R_old = old_pose(1:3, 1:3);
+            T = old_pose(1:3, 4);
+
+            % Step 2: Create a new rotation matrix based on axis-angle representation
+            k = rotVec / norm(rotVec);  % Ensure unit vector
+            kx = k(1); ky = k(2); kz = k(3);
+            R_theta = [cos(theta) + kx^2*(1-cos(theta)), kx*ky*(1-cos(theta)) - kz*sin(theta), kx*kz*(1-cos(theta)) + ky*sin(theta);
+                ky*kx*(1-cos(theta)) + kz*sin(theta), cos(theta) + ky^2*(1-cos(theta)), ky*kz*(1-cos(theta)) - kx*sin(theta);
+                kz*kx*(1-cos(theta)) - ky*sin(theta), kz*ky*(1-cos(theta)) + kx*sin(theta), cos(theta) + kz^2*(1-cos(theta))];
+
+            % Step 3: Multiply old rotation matrix by the new rotation matrix
+            R_new = R_theta * R_old;
+
+            % Step 4: Create a new 4x4 transformation matrix
+            new_pose = old_pose;
+            new_pose(1:3,1:3) = R_new;
+
+            [q, solnInfo] = ik('panda_hand_tcp',new_pose,weights,randomConfiguration(panda_sc));
+            %     show(panda_sc, q);
+
+            if strcmp(solnInfo.Status, "best available")
+                continue
+            elseif ~sv.isStateValid(q)
+                continue
+            else
+                previous_q = q;
+                s.dist = dist;
+                s.q = q;
+                s.new_pose = new_pose;
+
+                if j == 2
+                    break
+                end
+            end
+
+
+
+
+        end
+        all_s{end+1} = s;
+    end
+end
+
+for i = 2:numel(all_s)
+    try
+        s = all_s{i};
+        show(panda_sc, s.q);
+        hold on;
+    catch
+        disp("Skipping")
+        continue
+    end
+end
+
+% Save 
+save("safety.mat", "all_s")
+
+load("safety.mat")
+%% Plan paths
+paths = [];
+for i = 1:numel(all_s)
+    try
+        s = all_s{i};
+        q = s.q;
+        paths = [paths;q];
+    catch
+        continue
+    end
+end
+disp("Num paths: "+ num2str(size(paths,1)))
+
+parfor i = 1:size(paths,1)-1
+    fname = pwd+"/temp/"+sprintf("%03d", i) + "_"+sprintf("%03d", i+1)+".mat"; 
+
+    try
+    start = paths(i,:);
+    goal = paths(i+1,:);
+    [traj, sub_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
+
+    m=matfile(fname,'writable',true);
+    m.traj = traj;
+    m.sub_path = sub_path;
+    catch
+        disp("Failed for "+fname)
+
+    end
+end
+
+all_traj = [];
+for i = 1:size(paths,1)-1
+
+    fname = pwd+"/temp/"+sprintf("%03d", i) + "_"+sprintf("%03d", i+1)+".mat"; 
+    m = load(fname);
+    traj = m.traj;
+    all_traj = [all_traj;traj];
+end
+
+
+% Plot EE tip position
+T = getTransform(panda_sc, q, "panda_hand_tcp")
+
+
+
+plotJointMotion(panda_sc, all_traj, env, params)
+
+% 
+% 
+% %% Generate poses that correspond to the maximum
+% 
+% 
+% %% Test collision environment
+% 
+% % Generate list of poses for robot to hit that come very close to colliding
+% % with the collision environment. Run this on the real robot (at very slow speed) to see if any
+% % collisions occur
+% % TODO: Create a collision environment with all the
+% % objects/shelves/positions and use this to verify motions
+% 
+% num_th = 5;
+% num_Z = numel(Z_list);
+% th_list = linspace(2*pi/4, -2*pi/4, num_th);
+% initialGuess = q_home;
+% T_list = zeros(num_th, 4,4,num_Z-1);
+% q_list = zeros(num_th, num_Z-1, 9 );
+% show(panda_sc, q_home); hold on;
+% for th_num = 1:num_th
+%     th = th_list(th_num);
+%     for Z_num = 2:numel(Z_list)-1 %Omitting top shelf
+% 
+%         % Calc point on surface of sphere
+%         Z = Z_list(Z_num);
+% 
+%         xydist = sqrt((sphere_radius)^2 - (Z-sphere_origin(3))^2);
+%         X = xydist * cos(th);
+%         Y = xydist * sin(th);
+%         plot3(X,Y,Z,"*k"); hold on
+%         %
+%         %     % Calc point on surface of sphere adjusted inward
+%         %     Z = Z_list(Z_num);
+%         %     xydist = sqrt((sphere_radius-inner_dist)^2 - (Z-sphere_origin(3))^2);
+%         %     X = xydist * cos(th);
+%         %     Y = xydist * sin(th);
+% 
+% 
+% 
+%         %     % Calculate transform of this point
+%         %     T = eye(4);
+%         %     blue = [[X,Y,Z] - sphere_origin]/vecnorm([X,Y,Z]-sphere_origin);
+%         %     bluecross = cross(blue, [0,0,1]);
+%         %     bluecross = bluecross/vecnorm(bluecross)
+%         %     red = cross(blue, bluecross);
+%         %     green = cross(blue,red);
+%         %     T(1:3,1) = red;
+%         %     T(1:3,2) = green;
+%         %     T(1:3,3) = blue;
+%         %     T(1:3,4) = [X;Y;Z];
+%         %     T_list(:,:,Z_num) = T;
+% 
+%         T = eul2tform([0, pi/2,-th+SHAPE_ROTATION_ABOUT_Z]); % 180 deg rotation of end effector
+%         T(1:3,4) = [X,Y,Z];
+% 
+%         validationDistance = 0.1;
+%         ss = ManipulatorStateSpaceSphere(panda_ec, panda_sc);
+%         sv = ManipulatorStateValidatorSphere(ss, env, validationDistance);
+%         sv.ValidationDistance = 0.1;
+%         sv.IgnoreSelfCollision = false;
+%         sv.Environment = env;
+% 
+%         % Bring inward by certain distance
+%         inner_dist_values = 0.00:0.01:0.3
+%         found_valid_q = false;
+%         for inner_dist_num = 1:numel(inner_dist_values)
+%             inner_dist = inner_dist_values(inner_dist_num);
+%             T(1:3,4) = [X;Y;Z] + -inner_dist * T(1:3,3);
+% 
+%             ik_count = 0;
+%             while ik_count < 5
+%                 [q,solnInfo] = ik('panda_custom_shape', T, weights, initialGuess);
+% 
+%                 % Exit loop if not in self collision
+%                 if ~checkCollision(panda_sc, q)
+%                     break
+%                 end
+% 
+%                 initialGuess = randomConfiguration(panda_sc);
+%             end
+% 
+% 
+%             if ~strcmp(solnInfo.Status, 'success')
+%                 disp("unsuccessful IK")
+%                 continue
+%             end
+% 
+%             if sv.isStateValid(q)
+%                 found_valid_q = true;
+%                 break
+%             end
+%         end
+% 
+%         if ~found_valid_q
+%             error("Not successful in finding q that is not in collision")
+%         end
+% 
+%         T_list(th_num,:,:,Z_num) = T;
+%         q_list(th_num,Z_num,:) = q;
+%         %         show(panda_sc, q)
+%         initialGuess = q;
+%     end
+% end
+% % plotTransforms(se3(T_list))
+% plotJointMotion(panda_sc, q, env, sphere_radius, sphere_origin)
+% 
+% 
+% % Arrange q_sequences
+% q_seq = [];
+% for th_num = 1:num_th
+%     for Z_num = 2:num_Z-1
+%         if mod(th_num,2) == 1
+%             q = reshape(q_list(th_num,Z_num,:), [1,9]);
+%         elseif mod(th_num,2) ==0
+%             q = reshape(q_list(th_num,num_Z+1-Z_num,:), [1,9]);
+%         end
+%         q_seq = [q_seq;q];
+%     end
+% end
+% 
+% 
+% mkdir("tmp")
+% parfor q_num =1:size(q_seq,1)-1
+%     disp(q_num)
+%     q1 = q_seq(q_num,:);
+%     q2 = q_seq(q_num+1,:);
+%     traj = planJointToJoint(panda_ec, panda_sc, env, q1,q2, vMaxAll, aMaxAll, jMaxAll);
+% 
+%     % Save
+%     filename = "tmp/"+num2str(q_num)+".mat";
+%     m=matfile(filename,'writable',true);
+%     m.traj = traj;
+% end
+% 
+% trajectory = []
+% for q_num =1:size(q_seq,1)-1
+% 
+%     % Save
+%     load("./tmp/"+num2str(q_num)+".mat", "traj")
+%     trajectory = [trajectory;traj];
+% end
+% 
+% rmdir('tmp', 's')
+% 
+% 
+% show(panda_sc, q2);
+% 
+% plotJointMotion(panda_sc, trajectory, env, sphere_radius, sphere_origin)
+% 
+% 
+% trajectory = []
+% for th_num = 1:num_th
+%     for Z_num = 2:num_Z-2
+% 
+% 
+% 
+% 
+%         % Reverse order for alternating sequences
+%         traj = planJointToJoint(panda_ec, panda_sc, env, q1,q2, vMaxAll, aMaxAll, jMaxAll);
+%         trajectory = [trajectory;traj];
+%         %     plotJointMotion(panda_sc, trajectory, env, sphere_radius, sphere_origin)
+%     end
+% 
+% end
+% plotJointMotion(panda_sc, trajectory, env, sphere_radius, sphere_origin)
+% plotJointMotion(panda_sc, traj, env, sphere_radius, sphere_origin)
+% 
+% % for path_num = 1:size(q_list,1)-1
+% %     q1 = q_list(path_num,:)
+% %     q2 = q_list(path_num+1,:)
+% %     traj = planJointToJoint(panda_ec, env, q1,q2, vMaxAll, aMaxAll, jMaxAll);
+% %     trajectory = [trajectory;traj]
+% % %     plotJointMotion(panda_sc, trajectory, env, sphere_radius, sphere_origin)
+% % end
+% 
+% % show(panda_sc, q1); hold on
+% show(panda_sc, q2);
+% plotJointMotion(panda_sc, trajectory, env, sphere_radius, sphere_origin)
+% 
+% for i = 1:1000:size(trajectory,1)
+%     disp(i)
+%     assert(sv.isStateValid(trajectory(i,:)))
+% end
+% 
+% plotJointMotion(panda_sc, q, env, sphere_radius, sphere_origin)
+% 
+% 
+% inward_dist = 0.4;
+% disp('Too much inward dist')
+% 
+% full_env = build_full_collision_environment();
+% 
+% 
+% box = full_env{200};
+% initialGuess = q_home;
+% 
+% % Move box pose inward slightly to account for size of box and size of
+% % grasped shape
+% bP = box.Pose;
+% vec_to_origin = -bP(1:2, 4) / norm(bP(1:3,4));
+% bP(1:2,4) = bP(1:2,4) +inward_dist*vec_to_origin;
+% 
+% 
+% [q1,solnInfo] = ik('panda_custom_shape', bP, weights, initialGuess);
+% % plotJointMotion(panda_ec, q1, env)
+% checkCollision(panda_ec, q1, env)
+% 
+% 
+% box = full_env{50};
+% initialGuess = q_home;
+% 
+% % Move box pose inward slightly to account for size of box and size of
+% % grasped shape
+% inward_dist = 0.2;
+% bP = box.Pose;
+% vec_to_origin = -bP(1:2, 4) / norm(bP(1:3,4));
+% bP(1:2,4) = bP(1:2,4) +inward_dist*vec_to_origin;
+% [q2,solnInfo] = ik('panda_custom_shape', bP, weights, initialGuess);
+% 
+% tic;
+% plotJointMotion(panda_sc, q1, env, sphere_radius, sphere_origin);
+% checkCollision(panda_sc,q1, env)
+% checkCollision(panda_sc,q2, env)
+% plotJointMotion(panda_sc, q2, env, sphere_radius, sphere_origin)
+% 
+% q1_to_q2 = planJointToJoint(panda_sc, env, q1,q2, vMaxAll, aMaxAll, jMaxAll);
+% toc;
+% 
+% close all;
+% show(panda_sc, q1_to_q2(1000,:))
+% plotJointMotion(panda_sc, q1_to_q2, env, sphere_radius, sphere_origin)
+% 
+% % show(panda_sc, q)
+% % plotTransforms(se3(bP))
+% 
+% % plotJointMotion(panda_sc, home_to_out, env)
+% 
+% %
+% % [panda_ec, panda_sc] = loadPandaWithShape();
+% % basefolder = pwd+"/confirmed_positions_2_3/";
+% % factor = 2/3;
+% % new_shape_max_width = 0.070*factor;
+% % disp("Testing 2/3 spacings for " + num2str(numel(dir(basefolder))-2) + " combinations.")
+% % check_no_collision(panda_ec, panda_sc,env, basefolder, INTERFACE_HEIGHT,INTERFACE_WIDTH,INTERFACE_LENGTH,POST_LENGTH, SHAPE_MAX_HEIGHT, SHAPE_MAX_WIDTH, SHAPE_MAX_LENGTH, PEG_DEPTH, SHAPE_SPACING, SHELF_RIM_OFFSET, HEIGHT_FINGERSLOT_ABOVE_SHELF)
+% 
+% 
+% 
+% %
+% % % xyz = [0.6500649, 0.47182958, 0.554351];
+% % % theta = atan2(xyz(2), xyz(1));
+% % % % T = eul2tform([theta,-pi/2,pi]); % 180 deg rotation of end effector
+% % % T = eul2tform([theta,pi/2,0]);
+% % % T(1:3,4) = xyz;
+% % window_size = 50;  % Affects smoothing of cartesian path (for jerk)
+% % num_waypoints = 10;  % Affects how densely the cartesian path must be linear
+% % % q_slot5 = [1.59786,1.05315,-1.50036,-1.39843,2.52167,2.73922,2.46276, 0.01, 0.01];
+% % q_slot5 = [1.58885,0.982282,-1.43603,-1.38394,2.60255,2.78287,2.28877, 0.01, 0.01];
+% % %% Common
+% % ik = inverseKinematics('RigidBodyTree', panda);
+% % weights = [1 1 1 1 1 1];
+% %
+% % %% Poses
+% %
+% % pose_slot = getTransform(panda, q_slot5,'panda_hand_tcp' );
+% %
+% % pose_above = pose_slot;
+% % pose_above(3,4) = pose_above(3,4)+ABOVE_DIST;
+% %
+% % vec = pose_above(1:2,4);
+% % vec_norm = vec / norm(vec);
+% % pose_out = pose_above;
+% % pose_out(1:2, 4) = pose_out(1:2,4) - vec*OUT_DIST;
+% %
+% % poseArray = cat(3,pose_slot, pose_above, pose_out);
+% %
+% % %% Cartesian paths
+% % [paths, all_valid] = calc_sequence_cartesian_paths(panda, poseArray,q_slot5,window_size, num_waypoints, vMaxAll, aMaxAll, jMaxAll,vMaxAllAbsolute, aMaxAllAbsolute, jMaxAllAbsolute, jointMin, jointMax);
+% %
+% % slot_to_above = paths{1};
+% % above_to_out = paths{2};
+% %
+% % % Reverse paths
+% % out_to_above = flip(above_to_out, 1);
+% % above_to_slot = flip(slot_to_above,1);
+% %
+% % % Check
+% % assert(all(abs(slot_to_above(1,1:7)-q_slot5(1:7))<1e-5))
+% %
+% % %% Path to home
+% % home_to_out = planJointToJoint(panda, env, q_home,above_to_out(end,:), vMaxAll, aMaxAll, jMaxAll);
+% %
+% % % Reverse path
+% % out_to_home = flip(home_to_out,1);
+% %
+% % %% Path to staging
+% % out_to_staging = planJointToJoint(panda, env, above_to_out(end,:), q_staging, vMaxAll, aMaxAll, jMaxAll);
+% %
+% % % Reverse path
+% % staging_to_out = flip(out_to_staging,1);
+% %
+% % %% Present to monkey
+% % % Inputs
+% % % MOVE_TIME = 0.5; % s
+% % % stagingPose = getTransform(panda, q_staging, 'panda_hand_tcp');
+% % % monkeyPose = stagingPose;
+% % % monkeyPose(1:3, 4) = monkeyXYZ;
+% % % T = calcCartesianPoseMotion(stagingPose, monkeyPose, MOVE_TIME, vMaxCartTrans, aMaxCartTrans, jMaxCartTrans, vMaxCartRot, aMaxCartRot, jMaxCartRot);
+% % % staging_to_monkey = reshape(T,16,[])';
+% %
+% % % Reverse path
+% % % monkey_to_staging = reshape(T,16,[])';
+% %
+% % %% Hold for monkey
+% % % HOLD_TIME = 1.0;
+% % % hold_monkey = repmat(reshape(monkeyPose, 1,16), ceil(HOLD_TIME*1000), 1);
+% %
+% %
+% % %% Visualize
+% % combined_cell = {home_to_out; out_to_above; above_to_slot; slot_to_above; above_to_out; out_to_staging; staging_to_out; out_to_above; above_to_slot;slot_to_above; above_to_out; out_to_home};
+% % combined = [];
+% % for i=1:numel(combined_cell)
+% %     combined = [combined; combined_cell{i}];
+% % end
+% % plotJointMotion(panda, combined, env);
+% % % plotPoseMotion(panda, T, {}, q_staging);
+% %
+% % %% Write to csv
+% % slot_name = 'Slot5';
+% % speed_factor = num2str(vScale*100);
+% %
+% % % Joint positions
+% % writematrix(home_to_out(:, 1:7), [slot_name,'_home_to_out_',speed_factor,'%.csv'])
+% % writematrix(out_to_above(:, 1:7), [slot_name,'_out_to_above_',speed_factor,'%.csv'])
+% % writematrix(above_to_slot(:, 1:7), [slot_name,'_above_to_slot_',speed_factor,'%.csv'])
+% % writematrix(slot_to_above(:, 1:7), [slot_name,'_slot_to_above_',speed_factor,'%.csv'])
+% % writematrix(above_to_out(:, 1:7), [slot_name,'_above_to_out_',speed_factor,'%.csv'])
+% % writematrix(out_to_staging(:, 1:7), [slot_name,'_out_to_staging_',speed_factor,'%.csv'])
+% % writematrix(staging_to_out(:, 1:7), [slot_name,'_staging_to_out_',speed_factor,'%.csv'])
+% % writematrix(out_to_home(:, 1:7), [slot_name,'_out_to_home_',speed_factor,'%.csv'])
+% %
+% % % % Poses
+% % % writematrix(staging_to_monkey, [slot_name,'_staging_to_monkey_',speed_factor,'%.csv'])
+% % % writematrix(hold_monkey, [slot_name,'_hold_monkey_',speed_factor,'%.csv'])
+% % % writematrix(monkey_to_staging, [slot_name,'_monkey_to_staging_',speed_factor,'%.csv'])
+% %
+% %
+% % %% Checks
+% % plot_derivatives(combined(:,1:7))
+% % plotJointScaled(combined(:,1:7), jointMax, jointMin)
+% %
+% % for i=1:numel(combined_cell)
+% %     array = combined_cell{i};
+% %     assert(checkTrajectory(array, array(1,:), array(end,:), vMaxAllAbsolute, aMaxAllAbsolute, jMaxAllAbsolute))
+% % end
+% % checkTrajectory(combined, combined(1,:), combined(end,:), vMaxAllAbsolute, aMaxAllAbsolute, jMaxAllAbsolute)
+% % % writematrix(home_to_out(:, 1:7), 'Slot5_home_to_out_5%.csv')
+% % %
+% % % show(panda, q_home, 'Collisions', 'on');
+% % % hold on;
+% % % for i=1:numel(env)
+% % %     show(env{i})
+% % % end
+% % %
+% % %
+% % % % Calc path to monkey
+% % % % out_to_staging = planJointToJoint(panda, {}, above_to_out(end,:), stagingAngles, vMaxAll, aMaxAll, jMaxAll);
+% % %
+% % % % Flip reverse
+% % % % staging_to_out = flip(out_to_staging,1);
+% % % out_to_above = flip(above_to_out,1);
+% % %
+% % % % above_to_slot = flip(slot_to_above,1);
+% % % %
+% % %
+% % % % %% Visualize
+% % % %
+% % % combined = [home_to_out; out_to_above];
+% % % plotJointScaled(q(:,1:7), jointMax, jointMin);
+% % % plotJointMotion(panda, combined, {})
+% % % % plotPoseMotion(panda, T, {}, stagingAngles);
+% % % % pause(0.5)
+% % % % plotPoseMotion(panda, flip(T,3), {}, stagingAngles);
+% % % % plotJointMotion(panda, flip(combined,1), {})
+% % % %
+% % % % %% Export as csv
+% % % % writematrix(slot_to_above, 'Slot5_slot_to_above.csv')
+% % % % writematrix(above_to_out, 'Slot5_above_to_out.csv')
+% % % % writematrix(out_to_staging, 'Slot5_out_to_staging.csv')
+% % % % writematrix(staging_to_out, 'Slot5_staging_to_out.csv')
+% % % writematrix(out_to_above, 'Slot5_out_to_above_5%.csv')
+% % % % writematrix(above_to_slot, 'Slot5_above_to_slot.csv')
+% % % %
+% % % %
+% % % %
+% % % %
+% % % %
+% % % %
+% % % % % %
+% % % % % plot_derivatives(combined)
+% % % % %
+% % % % % checkTrajectory(combined, combined(1,:), combined(end,:), vMaxAll, aMaxAll, jMaxAll)
+% % % % %
+% % % % % %TODO: Figure out why above_to_out violates acceleration limits?
+% % % % % plot_derivatives(above_to_out)
+% % % % % % checkTrajectory(above_to_out, above_to_out(1,:), above_to_out(end,:), vMaxAll, aMaxAll, jMaxAll)
+% % % % %
+% % % % %
+% % % % % checkTrajectory(combined, combined(1,:), combined(end,:), vMaxAllAbsolute, aMaxAllAbsolute, jMaxAllAbsolute)
+% % % % %
+% % % % % q = above_to_out(:,end)';
+% %
