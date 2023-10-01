@@ -2,9 +2,7 @@
 
 Code to plan trajectories for the Franka Emika Panda robotic manipulator.
 
-
 https://github.com/williamsnider/panda_planner/assets/38354953/ca2cf7e8-0cd9-4160-b797-5c069f539a17
-
 
 ## Description
 
@@ -12,11 +10,17 @@ To study the neural basis of haptic 3D-shape perception, we need to be able to d
 
 ![Shelving System](assets/shelving_system-1.png)
 
-## Demo
+For planning paths and trajectories, _panda_planner_ ensures that:
 
-Recording grasps at 100Hz from 6 hardware-triggered cameras.
+- kinematic constraints are not violated (joint position/velocity/acceleration/jerk)
+- environment collisions (e.g. with shelves, other objects) do not occur
+- self collisions do not occur
 
-https://github.com/williamsnider/FLIR_multi_cam/assets/38354953/4e635d91-89a6-4f74-adad-b43fa7ced762
+## How to Use
+
+```
+
+```
 
 ## Description
 
