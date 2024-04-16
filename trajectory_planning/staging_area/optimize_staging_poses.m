@@ -8,7 +8,7 @@ params = CustomParameters();
 SAVE_DIR = "ballpark/";
 Y = 0.15;
 Z = 19*0.0254;
-OFFSET = 0.052;
+OFFSET = 0.07;  % dist from TCP to grasping center of shape
 TRAVEL_DIST = 0.15;
 
 
