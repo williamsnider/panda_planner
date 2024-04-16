@@ -6,7 +6,9 @@ params = CustomParameters();
 
 %% Inputs
 SAVE_DIR = "ballpark/";
+% Y = 0.175;
 Y = 0.15;
+% Z = 17 * 0.0254;
 Z = 19*0.0254;
 OFFSET = 0.07;  % dist from TCP to grasping center of shape
 TRAVEL_DIST = 0.15;
@@ -17,7 +19,7 @@ TRAVEL_DIST = 0.15;
 env = build_collision_environment();
 
 ss = ManipulatorStateSpaceSphere(panda_ec, panda_sc);
-sv = ManipulatorStateValidatorSphere(ss, env, params.validationDistance, params);
+sv = ManipulatorStateValidatorSphere(ss, env, params.validationDistance, params.radius_offset, params);
 sv.IgnoreSelfCollision = false;
 sv.Environment = env;
 
@@ -91,7 +93,18 @@ ori_E(1:3,1) = [0,0,-1];
 ori_E(1:3,2) = [0,-1,0];
 ori_E(1:3,3) = [-1,0,0];
 
-ori_cell = {ori_A, ori_B, ori_C, ori_D, ori_E};
+% Ori Y - 1/3 of way between Ori_C and Ori_D
+th = -pi/6;
+Ry = [cos(th) 0 sin(th); 0 1 0; -sin(th) 0 cos(th)];
+ori_Y = ori_C * Ry;
+
+th = 2*-pi/6;
+Ry = [cos(th) 0 sin(th); 0 1 0; -sin(th) 0 cos(th)];
+ori_Z = ori_C * Ry;
+
+
+ori_cell = {ori_A, ori_B, ori_C, ori_D, ori_E, ori_Y, ori_Z};
+ori_names = {"ori_A", "ori_B", "ori_C", "ori_D", "ori_E", "ori_Y", "ori_Z"};
 
 % Group data into struct
 s = struct;
@@ -100,6 +113,9 @@ s.ori_B = ori_B;
 s.ori_C = ori_C;
 s.ori_D = ori_D;
 s.ori_E = ori_E;
+s.ori_Y = ori_Y;
+s.ori_Z = ori_Z;
+
 s.Y = Y;
 s.Z = Z;
 s.OFFSET = OFFSET;
@@ -113,7 +129,6 @@ X_list = -0.70:0.01:-0.60;
 q_list_best_cell = cell(numel(X_list), numel(ori_cell));
 edge_dist_cell = cell(numel(X_list), numel(ori_cell));
 
-ori_names = {"ori_A", "ori_B", "ori_C", "ori_D", "ori_E"};
 args = [];
 for ori_num = 1:numel(ori_names)
     ori_Letter = ori_names{ori_num};
@@ -125,7 +140,7 @@ for ori_num = 1:numel(ori_names)
 end
 
 % Calc dists, save to .mat file
-for i = 6:size(args,1)
+parfor i = 1:size(args,1)
     disp(i)
     ori_Letter = args(i, 1);
     X = str2num(args(i,2));
@@ -138,7 +153,7 @@ files = dir(directory_path);
 fileNames = {files(~[files.isdir]).name}';% Filter out folders from the list
 
 
-best = zeros(numel(X_list), 5);
+best = zeros(numel(X_list), numel(ori_names));
 
 % Store in table
 
@@ -156,7 +171,7 @@ for i = 1:length(fileNames)
 
     % Get indices of X and ori_Letter for storing in "best" array
     X_idx = find(abs(X_list-X_val)<0.0001, 1);
-    for ori_idx =1:5
+    for ori_idx =1:7
         if strcmp(ori_names{ori_idx}, ori_Letter)
             break
         end
@@ -264,7 +279,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Choose X = -0.65 based on edge_dist_cell
-X = -0.65;
+X = -0.64;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -313,7 +328,7 @@ for ori_num =1:numel(ori_cell)
         q_staging_update(8:9) = 0.01;  
 
         % Pose Name
-        letters = 'ABCDE';
+        letters = 'ABCDEYZ';
         poseLetter = letters(ori_num);
         poseName = "staging_" + poseLetter + num2str(rot_num);
 
@@ -328,7 +343,7 @@ for ori_num =1:numel(ori_cell)
         q_extreme_update(8:9) = 0.01;  
 
         % Pose Name
-        letters = 'ABCDE';
+        letters = 'ABCDEYZ';
         poseLetter = letters(ori_num);
         poseName = "extreme_" + poseLetter + num2str(rot_num);
 
@@ -356,9 +371,16 @@ end
 
 
 %% Plot robot
-plotJointMotion(panda_sc, q, env, params)
+plotJointMotion(panda_sc, q_staging, env, params)
 plot3(params.shelf_pts(:,1),params.shelf_pts(:,2),params.shelf_pts(:,3), "r*")
 
+show(panda_sc, staging_A0); hold on;
+show(panda_sc, staging_B0); hold on;
+show(panda_sc, staging_C0); hold on;
+show(panda_sc, staging_D0); hold on;
+show(panda_sc, staging_E0); hold on;
+show(panda_sc, staging_Y0);
+show(panda_sc, staging_Z0);
 
 
 

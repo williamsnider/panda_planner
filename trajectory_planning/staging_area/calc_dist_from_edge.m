@@ -12,6 +12,7 @@ function calc_dist_from_edge(ori_Letter, X, s)
         XYZ = [X;Y;Z];
         T0 = construct_pose(ori, XYZ, OFFSET);
 
+
         [dist_from_edge_arr, q_list_arr] = find_best_q_for_cartesian_path(T0, TRAVEL_DIST, panda_sc, ik, params);
 
         % Save results        

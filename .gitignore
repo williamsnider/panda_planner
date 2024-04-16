@@ -1,5 +1,5 @@
 *.DS_store
-
+*.asv
 shelf_design/safety_sweep*
 
 planned_paths/*/*.csv

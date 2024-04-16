@@ -44,9 +44,9 @@ for loop_count = 1:num_loops
     j7 = q_list(end,7);
     jVals = j7:pi/2:j7+3*pi/2;
     jVals(jVals > params.jointMax(7)) = jVals(jVals >params.jointMax(7)) - 2*pi;
-    if any(abs(jVals-params.jointMax(7))< 0.1)
+    if any(abs(jVals-params.jointMax(7))< 0.3)
         dist_from_edge=0;
-    elseif any(any(abs(jVals-params.jointMin(7))< 0.1))
+    elseif any(any(abs(jVals-params.jointMin(7))< 0.3))
         dist_from_edge=0;
     end
 
