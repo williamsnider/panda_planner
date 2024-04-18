@@ -6,7 +6,7 @@ addpath("..")
 params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape();
 env = build_collision_environment();
-SAVE_DIR = "trajectories/";
+SAVE_DIR = "trajectories/20240418_";
 
 
 %% Hold at home position
@@ -81,7 +81,7 @@ end
 
 %% Paths between home and staging
 stagingPositions = string(stagingPositions);  % Convert to string array
-for A_num = 1:numel(stagingPositions)
+parfor A_num = 1:numel(stagingPositions)
 
 
         A_name = stagingPositions(A_num,:);

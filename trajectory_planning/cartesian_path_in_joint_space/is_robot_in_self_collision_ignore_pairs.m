@@ -4,7 +4,7 @@ function in_self_collision = is_robot_in_self_collision_ignore_pairs(robot_sc, q
     [~, sepDist] = checkCollision(robot_sc, q,{}, "SkippedSelfCollisions","parent");
 
     % Ignore pairs of links that are sometimes in collision due to the URDF
-    ignore_pairs = [3,5;5,7];  % Bodies 3 and 5 are mistakenly in self collision sometimes.
+    ignore_pairs = [3,5;5,7; 9,12];  % Bodies 3 and 5 are mistakenly in self collision sometimes, as are 8/12 (panda_hand vs panda_hand_tcp)
     for i=1:size(ignore_pairs,1)
         idx1 = ignore_pairs(i,1);
         idx2 = ignore_pairs(i,2);

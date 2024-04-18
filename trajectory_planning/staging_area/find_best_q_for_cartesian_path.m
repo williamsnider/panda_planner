@@ -17,6 +17,26 @@ for loop_count = 1:num_loops
     if strcmp(solnInfo.Status, "best available")
         continue
     end
+
+    % Check that there are no self collisions for it or rotations of J7
+    J7_list = (-pi:pi/2:pi/2) + q_initial(7);
+    J7_list(J7_list > 2.89) = J7_list(J7_list > 2.89) - 2*pi;
+    J7_list(J7_list < -2.89) = J7_list(J7_list < -2.89) + 2*pi;
+    J7_list_valid = true;
+    for J7_num = 1:4
+        q_to_test = q_initial;
+        q_to_test(7) = J7_list(J7_num);
+        if is_robot_in_self_collision_ignore_pairs(panda_sc,q_to_test)
+            J7_list_valid=false;
+            break
+        end
+    end
+    if J7_list_valid==false
+        continue
+    end
+
+
+
     q_list = [q_initial];
     scaled_list = calc_scaled(q_initial, params);
     for sample_num = 2:nSamples
@@ -49,6 +69,9 @@ for loop_count = 1:num_loops
     elseif any(any(abs(jVals-params.jointMin(7))< 0.3))
         dist_from_edge=0;
     end
+
+    % Confirm robot not in self collision
+    if is_robot_in_self_collision_ignore_pairs(panda_sc,q)
 
     dist_from_edge_arr(loop_count) = dist_from_edge;
     q_list_arr{loop_count} = q_list;

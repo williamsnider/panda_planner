@@ -15,53 +15,83 @@ ori_A(1:3,1) = [0,0,-1];
 ori_A(1:3,2) = [1,0,0];
 ori_A(1:3,3) = [0,-1,0];
 
+% Rotations about x-axis 90deg
+th1 = pi/2;
+R1 = [1 0 0; 0 cos(th1) -sin(th1);  0 sin(th1) cos(th1)];
 
-% Ori B - pointing down, peg towards robot
-ori_B = eye(3);
-ori_B(1:3,1) = [1,0,0];
-ori_B(1:3,2) = [0,-1,0];
-ori_B(1:3,3) = [0,0,-1];
+% Ori B - pointing down, peg towards hallway
+ori_B = R1 * ori_A;
 
-% Ori C - pointing left, peg towards floor
-ori_C = eye(3);
-ori_C(1:3,1) = [0,0,-1];
-ori_C(1:3,2) = [-1,0,0];
-ori_C(1:3,3) = [0,1,0];
+% Ori C - pointing down, peg toward ceiling
+ori_C = R1 * ori_B;
 
-% Ori D - pointing up, peg towards robot
-ori_D = eye(3);
-ori_D(1:3,1) = [1,0,0];
-ori_D(1:3,2) = [0,1,0];
-ori_D(1:3,3) = [0,0,1];
+% Ori D - pointing up, peg AWAY from hallway
+ori_D = R1 * ori_C;
 
-% Ori E - pointing towards monkey, peg towards floor
-ori_E = eye(3);
-ori_E(1:3,1) = [0,0,-1];
-ori_E(1:3,2) = [0,-1,0];
-ori_E(1:3,3) = [-1,0,0];
+% Rotations about z-axis 90 deg
+th2 = -pi/2;
+R2 = [cos(th2) -sin(th2) 0; sin(th2) cos(th2) 0; 0 0 1];
 
-% Ori Y - 1/2 of way between Ori_A and Ori_D
-th = -pi/4;
-Ry = [cos(th) 0 sin(th); 0 1 0; -sin(th) 0 cos(th)];
-ori_Y = ori_A * Ry;
-
-th = -2*pi/6;
-Ry = [cos(th) 0 sin(th); 0 1 0; -sin(th) 0 cos(th)];
-ori_Z = ori_A * Ry;
+% ori E - pointing toward monkey, peg down
+ori_E = R2 * ori_A;
 
 
-ori_cell = {ori_A, ori_B, ori_C, ori_D, ori_E, ori_Y};
-ori_names = {"ori_A", "ori_B", "ori_C", "ori_D", "ori_E", "ori_Y"};
+% % Ori B - pointing down, peg towards robot
+% ori_B = eye(3);
+% ori_B(1:3,1) = [1,0,0];
+% ori_B(1:3,2) = [0,-1,0];
+% ori_B(1:3,3) = [0,0,-1];
+% 
+% % Ori C - pointing left, peg towards floor
+% ori_C = eye(3);
+% ori_C(1:3,1) = [0,0,-1];
+% ori_C(1:3,2) = [-1,0,0];
+% ori_C(1:3,3) = [0,1,0];
+% 
+% % Ori D - pointing up, peg towards robot
+% ori_D = eye(3);
+% ori_D(1:3,1) = [1,0,0];
+% ori_D(1:3,2) = [0,1,0];
+% ori_D(1:3,3) = [0,0,1];
+% 
+% % Ori E - pointing towards monkey, peg towards floor
+% ori_E = eye(3);
+% ori_E(1:3,1) = [0,0,-1];
+% ori_E(1:3,2) = [0,-1,0];
+% ori_E(1:3,3) = [-1,0,0];
 
-for Y = 0.20:-0.01:0.15
+% Ori W - pointing down/right, peg down/towards hallway
+th3 = pi/4;
+R3 = [1 0 0;    0 cos(th3) -sin(th3);  0 sin(th3) cos(th3)];
+th4 = -pi/4;
+R4 = [cos(th4) -sin(th4) 0; sin(th4) cos(th4)  0; 0  0 1];
+ori_W = R3 * R4 * ori_A;
 
-    for Z = (14:1:18) * 0.0254
+% Ori_X - pointing down/left, peg up/towards hallway
+ori_X = R1 * ori_W;
+
+% ori_Y - pointing up/left, peg up/away from hallway
+ori_Y = R1 *ori_X;
+
+% ori_Z - pointing up/right, peg down/awaway from hallway
+ori_Z = R1 * ori_Y;
+
+
+ori_cell = {ori_A,ori_B, ori_C, ori_D, ori_E, ori_W, ori_X, ori_Y, ori_Z};
+ori_names = {"ori_A","ori_B", "ori_C", "ori_D", "ori_E","ori_W", "ori_X", "ori_Y", "ori_Z"};
+plot_ori(ori_cell)
+
+% Best results were Y=17, Z=15 and Y=18,Z=14/15
+
+for Y = 0.18:-0.01:0.17
+
+    for Z = (15:16) * 0.0254
 
         % Y = 0.175;
         % Y = 0.15;
         % Z = 17 * 0.0254;
         % Z = 19*0.0254;
-        OFFSET = 0.07;  % dist from TCP to grasping center of shape
+        OFFSET = 0.07; % dist from TCP to grasping center of shape
         TRAVEL_DIST = 0.15;
 
 
@@ -80,23 +110,23 @@ for Y = 0.20:-0.01:0.15
         % thres = 0.10;
         % for body_num = 1:panda_sc.NumBodies
         %
-        %     joint = panda_sc.Bodies{body_num}.Joint;
+        % joint = panda_sc.Bodies{body_num}.Joint;
         %
         %
-        %     % Skip non revolute
-        %     if ~strcmp(joint.Type ,'revolute')
-        %         continue
-        %     end
+        % % Skip non revolute
+        % if ~strcmp(joint.Type ,'revolute')
+        % continue
+        % end
         %
-        %     % Update values to be 10% of max
-        %     old = joint.PositionLimits;
+        % % Update values to be 10% of max
+        % old = joint.PositionLimits;
         %
-        %     range = old(2)-old(1);
-        %     new_min = old(1) + range*(thres);
-        %     new_max = old(1) + range*(1-thres);
-        %     new = [new_min, new_max];
+        % range = old(2)-old(1);
+        % new_min = old(1) + range*(thres);
+        % new_max = old(1) + range*(1-thres);
+        % new = [new_min, new_max];
         %
-        %     panda_sc.Bodies{body_num}.Joint.PositionLimits = new;
+        % panda_sc.Bodies{body_num}.Joint.PositionLimits = new;
         %
         % end
 
@@ -118,6 +148,8 @@ for Y = 0.20:-0.01:0.15
         s.ori_C = ori_C;
         s.ori_D = ori_D;
         s.ori_E = ori_E;
+        s.ori_W = ori_W;
+        s.ori_X = ori_X;
         s.ori_Y = ori_Y;
         s.ori_Z = ori_Z;
 
@@ -130,7 +162,7 @@ for Y = 0.20:-0.01:0.15
         s.params = params;
 
         % Calculate a cartesian path between two extremes
-        X_list = -0.70:0.01:-0.60;
+        X_list = -0.65:0.01:-0.60;
         q_list_best_cell = cell(numel(X_list), numel(ori_cell));
         edge_dist_cell = cell(numel(X_list), numel(ori_cell));
 
@@ -145,7 +177,7 @@ for Y = 0.20:-0.01:0.15
         end
 
         % Calc dists, save to .mat file
-        parfor i = 1:size(args,1)
+       for i = 1:size(args,1)
             disp(i)
             ori_Letter = args(i, 1);
             X = str2num(args(i,2));
@@ -176,7 +208,7 @@ for Y = 0.20:-0.01:0.15
 
             % Get indices of X and ori_Letter for storing in "best" array
             X_idx = find(abs(X_list-X_val)<0.0001, 1);
-            for ori_idx =1:6
+            for ori_idx =1:numel(ori_names)
                 if strcmp(ori_names{ori_idx}, ori_Letter)
                     break
                 end
@@ -218,7 +250,7 @@ for k = 1:length(files)
 
     % Full path to the file
     filename = fullfile(directory, files(k).name);
-    
+
     % Load the file
     data = load(filename);
     disp("***************************")
@@ -226,7 +258,7 @@ for k = 1:length(files)
     disp(data.best)
 
 end
-
+% 
 % % % %% Generate home_to_candidate staging positions
 % % % % Choose X = -0.65
 % % % X = -0.65;
@@ -235,47 +267,47 @@ end
 % % %
 % % %
 % % % for ori_num = 1:5
-% % %     ori_Letter = ori_names{ori_num};
-% % %     X_str = num2str(X);
+% % % ori_Letter = ori_names{ori_num};
+% % % X_str = num2str(X);
 % % %
-% % %     % Load file
-% % %     fname = strcat(ori_Letter, "_", X_str, ".mat");
-% % %     m = load(fname);
+% % % % Load file
+% % % fname = strcat(ori_Letter, "_", X_str, ".mat");
+% % % m = load(fname);
 % % %
-% % %     % Find top 10 q's to test
-% % %     s = struct();
-% % %     NUM = 10;
-% % %     [sortedA, indices] = sort(m.dist_from_edge_arr, 'descend');
-% % %     q_to_try = zeros(NUM, 9);
-% % %     for j=1:NUM
-% % %         q_list = m.q_list_arr{indices(j)};
-% % %         q = q_list(5,:);
-% % %         q_to_try(j, :) = q;
-% % %         key = strcat(ori_Letter,"_",sprintf('%02d',j));
-% % %         mapObj(key) = q;
+% % % % Find top 10 q's to test
+% % % s = struct();
+% % % NUM = 10;
+% % % [sortedA, indices] = sort(m.dist_from_edge_arr, 'descend');
+% % % q_to_try = zeros(NUM, 9);
+% % % for j=1:NUM
+% % % q_list = m.q_list_arr{indices(j)};
+% % % q = q_list(5,:);
+% % % q_to_try(j, :) = q;
+% % % key = strcat(ori_Letter,"_",sprintf('%02d',j));
+% % % mapObj(key) = q;
 % % %
-% % %         disp("***")
-% % %         disp(key)
-% % %         disp(m.dist_from_edge_arr(indices(j)))
-% % %         disp(q);
+% % % disp("***")
+% % % disp(key)
+% % % disp(m.dist_from_edge_arr(indices(j)))
+% % % disp(q);
 % % %
-% % %     end
+% % % end
 % % % end
 % % %
 % % % key_list = mapObj.keys;
 % % % parfor key_num = 1:numel(mapObj.keys)
-% % %     key = key_list{key_num};
-% % %     q = mapObj(key);
+% % % key = key_list{key_num};
+% % % q = mapObj(key);
 % % %
-% % %     start = q;
-% % %     goal = getfield(params, "q_home");
-% % %     all_trajectory = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
+% % % start = q;
+% % % goal = getfield(params, "q_home");
+% % % all_trajectory = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
 % % %
-% % %     paths_struct = struct(key+"_to_home", all_trajectory, "home_to_"+key, flip(all_trajectory,1));
-% % %     assert(motionCheck(panda_ec, panda_sc, env, paths_struct, params))
+% % % paths_struct = struct(key+"_to_home", all_trajectory, "home_to_"+key, flip(all_trajectory,1));
+% % % assert(motionCheck(panda_ec, panda_sc, env, paths_struct, params))
 % % %
-% % %     SAVE_DIR = "./test_paths/";
-% % %     writeCSV_from_paths_struct(paths_struct, SAVE_DIR, params);
+% % % SAVE_DIR = "./test_paths/";
+% % % writeCSV_from_paths_struct(paths_struct, SAVE_DIR, params);
 % % %
 % % % end
 % % %
@@ -285,26 +317,26 @@ end
 % % % % for A_num = 1:numel(stagingPositions)
 % % % %
 % % % %
-% % % %         A_name = stagingPositions(A_num,:);
+% % % % A_name = stagingPositions(A_num,:);
 % % % %
-% % % %         % Skip different letters
-% % % %         A_name_char = char(A_name);
-% % % %         A_letter = A_name_char(end-1);
+% % % % % Skip different letters
+% % % % A_name_char = char(A_name);
+% % % % A_letter = A_name_char(end-1);
 % % % %
-% % % %         % Plan paths
-% % % %         start = getfield(params, A_name);
-% % % %         goal = getfield(params, "q_home");
-% % % %         all_trajectory = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
+% % % % % Plan paths
+% % % % start = getfield(params, A_name);
+% % % % goal = getfield(params, "q_home");
+% % % % all_trajectory = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
 % % % %
-% % % %         % Check motion is OK
-% % % %         paths_struct = struct(A_name+"_to_home", all_trajectory, "home_to_"+A_name, flip(all_trajectory,1));
-% % % %         assert(motionCheck(panda_ec, panda_sc, env, paths_struct, params))
+% % % % % Check motion is OK
+% % % % paths_struct = struct(A_name+"_to_home", all_trajectory, "home_to_"+A_name, flip(all_trajectory,1));
+% % % % assert(motionCheck(panda_ec, panda_sc, env, paths_struct, params))
 % % % %
-% % % %         % Write CSV
-% % % %         writeCSV_from_paths_struct(paths_struct, SAVE_DIR, params);
+% % % % % Write CSV
+% % % % writeCSV_from_paths_struct(paths_struct, SAVE_DIR, params);
 % % % %
-% % % % %         show(panda_ec, params.stagingA0)
-% % % % %         plotJointMotion(panda_sc, all_trajectory, env, params)
+% % % % % show(panda_ec, params.stagingA0)
+% % % % % plotJointMotion(panda_sc, all_trajectory, env, params)
 % % % % end
 % % % %
 % % % %
@@ -313,20 +345,20 @@ end
 % % % % % Plot robot
 % % % % indices = [1,5];
 % % % % for i = 1:numel(indices)
-% % % %     idx = indices(i);
-% % % %     ori_num = 1;
-% % % %     q_arr = q_best{ori_num};
-% % % %     q = q_arr(idx, :);
-% % % %     getTransform(panda_sc, q, "panda_hand_tcp")
-% % % %     show(panda_sc, q); hold on;
+% % % % idx = indices(i);
+% % % % ori_num = 1;
+% % % % q_arr = q_best{ori_num};
+% % % % q = q_arr(idx, :);
+% % % % getTransform(panda_sc, q, "panda_hand_tcp")
+% % % % show(panda_sc, q); hold on;
 % % % % end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Choose X = -0.65 based on edge_dist_cell
-X = -0.64;
-Y = 0.0;
-Z = 'replace';
+X = -0.63;
+Y = 0.17;
+Z = 15*0.0254;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -346,23 +378,23 @@ for ori_num =1:numel(ori_cell)
     dist_from_edge = m.dist_from_edge_arr(idx);
     q_list_best = m.q_list_arr{idx};
 
-    %     % Get pose
-    %     ori = ori_cell{ori_num};
-    %     XYZ = [X;Y;Z];
-    %     T0 = construct_pose(ori, XYZ, OFFSET);
+    % % Get pose
+    % ori = ori_cell{ori_num};
+    % XYZ = [X;Y;Z];
+    % T0 = construct_pose(ori, XYZ, OFFSET);
     %
-    %     % Calculate q that gives acceptable cartesian path
-    %     [dist_from_edge_best, q_list_best] = find_best_q_for_cartesian_path(T0, TRAVEL_DIST, panda_sc,ik, params);
-    %     assert(dist_from_edge_best>0.05);
+    % % Calculate q that gives acceptable cartesian path
+    % [dist_from_edge_best, q_list_best] = find_best_q_for_cartesian_path(T0, TRAVEL_DIST, panda_sc,ik, params);
+    % assert(dist_from_edge_best>0.05);
     %
     % Adjust q's 7th joint for different rotations
     q_staging = q_list_best(end,:);
     j7 = q_staging(7);
     jValsStaging = j7:pi/2:j7+3*pi/2;
-    jValsStaging(jValsStaging > params.jointMax(7)) = jValsStaging(jValsStaging >params.jointMax(7)) - 2*pi;      % roll jValsStaging to be within joint limits
+    jValsStaging(jValsStaging > params.jointMax(7)) = jValsStaging(jValsStaging >params.jointMax(7)) - 2*pi; % roll jValsStaging to be within joint limits
 
     % Adjust q_extreme's 7th joint for diferent rotations;
-    q_extreme = q_list_best(1,:);  % Most extreme position (monkey should be prevented from pulling further)
+    q_extreme = q_list_best(1,:); % Most extreme position (monkey should be prevented from pulling further)
     j7 = q_extreme(7);
     jValsExtreme = j7:pi/2:j7+3*pi/2;
     jValsExtreme(jValsExtreme > params.jointMax(7)) = jValsExtreme(jValsExtreme > params.jointMax(7)) - 2*pi;
@@ -375,7 +407,7 @@ for ori_num =1:numel(ori_cell)
         q_staging_update(8:9) = 0.01;
 
         % Pose Name
-        letters = 'ABCDEYZ';
+        letters = 'ABCDEWXYZ';
         poseLetter = letters(ori_num);
         poseName = "staging_" + poseLetter + num2str(rot_num);
 
@@ -390,7 +422,6 @@ for ori_num =1:numel(ori_cell)
         q_extreme_update(8:9) = 0.01;
 
         % Pose Name
-        letters = 'ABCDEYZ';
         poseLetter = letters(ori_num);
         poseName = "extreme_" + poseLetter + num2str(rot_num);
 
