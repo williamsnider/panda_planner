@@ -6,3 +6,4 @@ function pose = construct_pose(ori, XYZ, offset)
     pose(1:3,4) = XYZ - offset*pose(1:3,3);
 
 end
+

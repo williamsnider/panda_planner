@@ -71,7 +71,6 @@ for loop_count = 1:num_loops
     end
 
     % Confirm robot not in self collision
-    if is_robot_in_self_collision_ignore_pairs(panda_sc,q)
 
     dist_from_edge_arr(loop_count) = dist_from_edge;
     q_list_arr{loop_count} = q_list;
