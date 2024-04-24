@@ -1,5 +1,4 @@
 % Code to find the best configurations for the staging area / monkey grasp
-
 clear; close all;
 addpath("../..")
 params = CustomParameters();
@@ -12,9 +11,10 @@ RandStream.setGlobalStream(stream);
 %% Inputs
 shape_offset = 0.07;
 TRAVEL_DIST = 0.15;
-J7_CUTOFF = 0.2;
 NUM_ATTEMPTS = 3000;
 JOINT_REDUCTION = 0.3;
+J7_REDUCTION = 0.2;
+SAVE_DIR = "./elbow_tables/20240424_";
 
 %% Construct list of orientations
 % Ori A - pointing left, peg towards floor
@@ -62,15 +62,20 @@ plot_ori(ori_cell)
 [panda_ec, panda_sc] = loadPandaWithShape();
 env = build_collision_environment();
 
-
-
+% Restrict joints 1-6 by JOINT_REDUCTION
 for body_num = 1:6
     oldLimits = panda_sc.Bodies{body_num}.Joint.PositionLimits;
     newLimits = oldLimits + [JOINT_REDUCTION,-JOINT_REDUCTION];
     panda_sc.Bodies{body_num}.Joint.PositionLimits = newLimits;
 end
 
+% Restrict joint 7 by J7_REDUCTION
+body_num = 7;
+oldLimits = panda_sc.Bodies{body_num}.Joint.PositionLimits;
+newLimits = oldLimits + [J7_REDUCTION,-J7_REDUCTION];
+panda_sc.Bodies{body_num}.Joint.PositionLimits = newLimits;
 
+% Construct ik solver
 ik = inverseKinematics('RigidBodyTree',panda_sc);
 ik.SolverParameters.MaxIterations = 1000;
 weights = [1 1 1 1 1 1];
@@ -142,25 +147,30 @@ for cell_num = 1:numel(ori_cell)
     success_cell{cell_num} = [];
 end
 
+disp("Testing if XYZ is valid")
 for cell_num = 1:numel(T_cell)
+    cell_num
  
 
-    % Test if XYZ position is valid
+    % Test if XYZ position is valid (can find q_extreme and q_staging)
     attempt_num = 0;
     while attempt_num < NUM_ATTEMPTS
         attempt_num = attempt_num + 1;
         T_extreme = T_cell{cell_num};
-        [success, q_extreme, q_staging] = find_valid_staging_pose(panda_sc,ik, T_extreme, TRAVEL_DIST, J7_CUTOFF);
+        [success, q_extreme, q_staging_temp] = find_valid_staging_pose(panda_sc,ik, T_extreme, TRAVEL_DIST, J7_REDUCTION);
         if success
             T_success(cell_num) = true;
-            success_cell{cell_num} = [success_cell{cell_num}; [q_extreme, q_staging]];
+            success_cell{cell_num} = [success_cell{cell_num}; [q_extreme, q_staging_temp]];
+        end
+
+        if size(success_cell{cell_num},1) > 100
+            break
         end
     end
 
 end
 
-
-%% Choose q_extreme and q_staging that are furthest frrom joint extremes
+%% Choose q_extreme that is furthest from joint limits; recalculate q_staging
 
 for cell_num = 1:numel(ori_names)
 
@@ -170,36 +180,29 @@ for cell_num = 1:numel(ori_names)
     for i = 1:num_configurations
     
         % Get staging and extreme positions
-        q_s = success_cell{cell_num}(i,10:end);
         q_e = success_cell{cell_num}(i,1:9);
-    
-        % Calculate scaled distance to extremes for J1-6
-        q = q_s(1:7);
-        scaled_positions = (q-params.jointMin)./(params.jointMax-params.jointMin);
-        scaled_positions = scaled_positions(1:6);
-        q_dist_s = min(min(scaled_positions),min(1-scaled_positions));
         
         q = q_e(1:7);
         scaled_positions = (q-params.jointMin)./(params.jointMax-params.jointMin);
         scaled_positions = scaled_positions(1:6);
         q_dist_e = min(min(scaled_positions),min(1-scaled_positions));
-        
-        % Choose extreme only
-        q_dist = q_dist_e;
-        scaled_dist_to_edge_arr(i) = q_dist;
+        scaled_dist_to_edge_arr(i) = q_dist_e;
     end
     
     % Chose best q_dist
     [~, idx] = max(scaled_dist_to_edge_arr);
     
-    % Display result
+    % Calculate elbow table and q_staging
+    q_extreme = success_cell{cell_num}{idx,1:9};
     poseLetter = ori_names{cell_num}{1}(5);
+    [elbow_table, q_staging] = calc_elbow_table(q_extreme, panda_sc, TRAVEL_DIST, ik, SAVE_DIR, letter);
     
+    % Display q_staging and q_extreme at different joint values
     for rot_num = 0:3
     
         % Staging
-        poseName = "staging_" + poseLetter + num2str(rot_num);
-        q_s = success_cell{cell_num}(idx,10:end);
+        poseName = "staging" + poseLetter + num2str(rot_num);
+        q_s = q_staging;
         q_s(7) = q_s(7) + pi/2*rot_num;
         if q_s(7) > 2.8
             q_s(7) = q_s(7)-2*pi;
@@ -208,8 +211,8 @@ for cell_num = 1:numel(ori_names)
         disp(msg)
     
         % Extreme
-        poseName = "extreme_" + poseLetter + num2str(rot_num);
-        q_e = success_cell{cell_num}(idx,1:9);
+        poseName = "extreme" + poseLetter + num2str(rot_num);
+        q_e = q_extreme;
         q_e(7) = q_e(7) + pi/2*rot_num;
         if q_e(7) > 2.8
             q_e(7) = q_e(7)-2*pi;
@@ -220,9 +223,3 @@ for cell_num = 1:numel(ori_names)
     
     end
 end
-show(panda_sc, q_s); hold on
-show(panda_sc, q_e); hold on
-
-
-
-
