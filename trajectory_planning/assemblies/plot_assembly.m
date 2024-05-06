@@ -1,4 +1,4 @@
-function plot_assembly(panda_sc, q, triObj, cylinderRadius, ori_base, XYZ)
+function plot_assembly(panda_sc, q, triObj, cylinderRadius, XYZ)
 % Color each object differently
 s=show(panda_sc, q, 'Collisions', 'off','Frames',"off", 'Visuals', 'on');
 h = findall(s, 'Type', 'patch');  % This finds all patch objects in the figure
@@ -41,7 +41,7 @@ vertices = [
 % Define transformation matrix T
 % Example: Move and rotate the box
 T_box = eye(4);
-T_box(1:3,1:3) = ori_base;
+% T_box(1:3,1:3) = ori_base;
 T_box(1:3,4) = XYZ';
 T_box(1,4) = T_box(1,4) -width/2 - 2*cylinderRadius;
 T_box(3,4) = T_box(3,4) - height/2;

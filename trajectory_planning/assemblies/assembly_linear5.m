@@ -104,8 +104,8 @@ end
 
 %% Do inverse kinematics for shape positions
 XYZ_list = [];
-for X = -0.60:-0.01:-0.70
-    for Y = 0.10:0.01:0.20
+for X = -0.60:-0.02:-0.70
+    for Y = 0.10:0.02:0.20
         for Z = (12.5:1:22.5)*0.0254
             XYZ = [X,Y,Z];
             XYZ_list = [XYZ_list;XYZ];
@@ -113,44 +113,23 @@ for X = -0.60:-0.01:-0.70
     end
 end
 
+    theta_list = -pi/4:pi/2:5*pi/4;
+
+
+ik = inverseKinematics('RigidBodyTree',panda_sc);
+ik.SolverParameters.MaxIterations = 1000;
 parfor XYZ_num = 1:size(XYZ_list,1)
     warning('off', 'all');
 
     XYZ = XYZ_list(XYZ_num,:);
 
-    theta_list = -pi/4:pi/2:5*pi/4;
     q_success = zeros(numel(body_names), numel(theta_list));
     for body_num = 1:numel(body_names)
         body_name = body_names{body_num};
         for theta_num = 1:numel(theta_list)
             theta = theta_list(theta_num);
-            ori_base = eye(3);
-            ori_A0 = ori_base;
 
-            T_A0 = eye(4);
-            Rz = [cos(theta) -sin(theta) 0;
-                sin(theta) cos(theta) 0;
-                0 0 1];
-            T_A0(1:3,1:3) = Rz;
-            T_A0(1:3,4) = XYZ';
-
-            T = T_A0;
-            ik = inverseKinematics('RigidBodyTree',panda_sc);
-            ik.SolverParameters.MaxIterations = 1000;
-
-            attempt_num = 1;
-            while attempt_num < 10
-                initialGuess = randomConfiguration(panda_sc);
-                initialGuess(8:9) = 0.01;
-                [q,solnInfo] = ik(body_name,T,[1 1 1 1 1 1],initialGuess);
-
-                if ~checkCollision(panda_sc, q)
-                    break
-                else
-                    %                 disp('Collision detected')
-                    attempt_num = attempt_num + 1;
-                end
-            end
+            [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik);       
 
 
             % Check that ik was successful
@@ -174,6 +153,37 @@ parfor XYZ_num = 1:size(XYZ_list,1)
     if num_invalid==0
         result = strcat(num2str(XYZ), "      : ", num2str(num_invalid));
         disp(result)
+    end
+end
+
+
+%% Chose XYZ
+XYZ = [-0.60, 0.1, 0.5207];
+
+for body_num = 1:numel(body_names)
+    body_name = body_names{body_num};
+    for theta_num = 1:numel(theta_list)
+        theta = theta_list(theta_num);
+
+        [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik);       
+
+
+        % Check that ik was successful
+        if ~strcmp(solnInfo.Status, "success")
+            disp("IK failed")
+        end
+
+        % Check that not in collision
+        if checkCollision(panda_sc, q)
+            disp("Self collision")
+        end
+
+
+
+
+        %% Show result
+        plot_assembly(panda_sc, q, triObj, cylinderRadius, XYZ)
+        input("")
     end
 end
 
