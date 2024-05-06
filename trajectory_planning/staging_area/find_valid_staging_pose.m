@@ -6,10 +6,10 @@ q_e = zeros(9);
 q_s = zeros(9);
 
 % Generate q_extreme
-initialGuess = randomConfiguration(panda_sc);
+if stinitialGuess = randomConfiguration(panda_sc);
 initialGuess(8:9) = 0.01;
 [q_extreme,solnInfo] = ik('panda_hand_tcp',T_extreme,[1 1 1 1 1 1],initialGuess);
-if strcmp(solnInfo.Status, "best available")
+rcmp(solnInfo.Status, "best available")
     return
 end
 

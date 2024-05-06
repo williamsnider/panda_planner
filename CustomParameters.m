@@ -78,6 +78,9 @@ classdef CustomParameters
  % (fake values for last 2, which are the gripper, but the real robot is
  % controlled differently).
 
+ % translate from panda_hand to panda_hand_tcp
+ hand_to_tcp = 0.1034;
+
  % Joint kinematic constraints (fake values for last two, which are gripper,
  % but real robot is controlled differently).
  sMaxAllAbsolute = [2.8973 1.7628 2.8973 -0.0698 2.8973 3.7525 2.8973 10.0 10.0];
