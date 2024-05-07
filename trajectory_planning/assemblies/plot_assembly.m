@@ -22,7 +22,7 @@ delete(hl);
 %% Plot reaching box
 
 % Define the dimensions of the box
-width = 0.2;  % X dimension
+width = 0.15;  % X dimension
 height = 0.05;  % Y dimension
 length = 0.05;  % Z dimension
 
