@@ -7,7 +7,7 @@
 % is automatically deleted.
 
 collision_mesh_points = struct();
-name_list = ["link0", "link1", "link2", "link3", "link4", "link5", "link6", "link7", "hand", "custom_shape"];
+name_list = ["link0", "link1", "link2", "link3", "link4", "link5", "link6", "link7", "hand", "cylinder1", "cylinder2", "cylinder3", "cylinder4"];
 for i = 1:numel(name_list)
     name = name_list(i);
     xyz = stlread(strcat(fileparts(mfilename('fullpath')), "/panda_description/", name, ".stl")).Points;

@@ -6,15 +6,23 @@ c = struct();
 %% Inputs
 JOINT_REDUCTION = 0.2;
 J7_REDUCTION = 0.1;
-cylinderLength = 0.05;  % Length of the cylinder
-cylinderRadius = 0.025;  % Radius of the cylinder
+cylinderLength = params.cylinderLength;
+cylinderRadius = params.cylinderRadius;
 cylinderSpacing = 0.075; % (linear array)
 TCP_Z_OFFSET = 0.0;  % (radial array)
 TCP_LENGTH_OFFSET = 0.11; % (radial array)
 
 %% Load robot
-[panda_ec, panda_sc] = loadPandaWithShape();
+[panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
+
+
+% % Remove custom shape
+% removeBody(panda_sc, 'panda_custom_shape')
+% removeBody(panda_ec, 'panda_custom_shape')
+
+c.panda_sc_orig = panda_sc;
+c.panda_ec_orig = panda_ec;
 
 % Reduce range of motion of joints for safety
 % Restrict joints 1-6 by JOINT_REDUCTION
@@ -38,28 +46,9 @@ panda_sc.Bodies{body_num}.Joint.PositionLimits = newLimits;
 
 
 
-% Remove custom shape
-removeBody(panda_sc, 'panda_custom_shape')
 
 
 
-%% Create mesh of cylinder as shape
-numPoints = 20;
-[xc, yc, zc] = cylinder(cylinderRadius, numPoints);
-zc(2, :) = cylinderLength;  % Adjust cylinder length
-
-% Convert cylindrical coordinates to vertices and faces
-vertices = [xc(:), yc(:), zc(:)];
-faces = convhull(xc(:), yc(:), zc(:));
-
-% Shift cylinder so that joint position is inside the cylidner
-vertices(:,3) = vertices(:,3) - cylinderLength;
-
-triObj = triangulation(faces, vertices);
-
-% Save the mesh as an STL file
-stlFileName = 'cylinderMesh.stl';
-stlwrite(triObj, stlFileName);
 
 %% Attach shapes to robot
 body_names = {};
@@ -78,20 +67,24 @@ if strcmp(assembly_type, "linear")
         setFixedTransform(joint, trvec2tform([0, yOffset, params.hand_to_tcp + cylinderLength]));  % Offset position
     
         % Create the cylinder body
-        body_name = ['body_', num2str(i)];
+        body_name = ['panda_cylinder', num2str(i)];
         body_names{end+1} = body_name;
-        body = rigidBody(['body_', num2str(i)]);
+        body = rigidBody(body_name);
         body.Joint = joint;
     
         % Add visual mesh to the body
+        stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
         addVisual(body, 'Mesh', stlFileName);
     
         % Add collision mesh to the body
-        collisionBody = collisionCylinder(cylinderRadius, 2*cylinderLength);
+        collisionBody = collisionCylinder(cylinderRadius, cylinderLength);
+        collisionBody.Pose(3,4) = collisionBody.Pose(3,4) - cylinderLength/2; % have far end of collision body align with the interaction point
         addCollision(body, collisionBody);
     
         % Attach to the robot tree
         addBody(panda_sc, body, 'panda_hand');
+        addBody(panda_ec, body, 'panda_hand');
+
     end
 elseif  strcmp(assembly_type, "radial")
     
@@ -116,12 +109,13 @@ elseif  strcmp(assembly_type, "radial")
         setFixedTransform(joint, T_cylinder);  % Offset position
     
         % Create the cylinder body
-        body_name = ['body_', num2str(i)];
+        body_name = ['panda_cylinder', num2str(i)];
         body_names{end+1} = body_name;
-        body = rigidBody(['body_', num2str(i)]);
+        body = rigidBody(body_name);
         body.Joint = joint;
     
         % Add visual mesh to the body
+        stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
         addVisual(body, 'Mesh', stlFileName);
     
         % Add collision mesh to the body
@@ -129,6 +123,7 @@ elseif  strcmp(assembly_type, "radial")
         addCollision(body, collisionBody);
     
         % Attach to the robot tree
+        addBody(panda_ec, body, 'panda_hand');
         addBody(panda_sc, body, 'panda_hand');
     end
 else
@@ -140,7 +135,5 @@ c.body_names = body_names;
 c.panda_sc = panda_sc;
 c.panda_ec = panda_ec;
 c.env = env;
-c.triObj = triObj;
-c.cylinderRadius = cylinderRadius;
 end
 

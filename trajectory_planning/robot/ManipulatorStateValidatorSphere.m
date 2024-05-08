@@ -133,13 +133,19 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
                     d=2*obj.params.top_cylinder_radius;
                     within_top=CheckPointCylinder(vc1,vc2,d,xyz_base')';
 
-                    all_valid = (within_sphere|within_bottom|within_top);
+                    % Check if within staging box
+                    within_staging_box = CheckPointBox(xyz_base, obj.params.staging_box_width, obj.params.staging_box_height, obj.params.staging_box_length, obj.params.staging_box_center);
+
+
+
+                    all_valid = (within_sphere|within_bottom|within_top|within_staging_box);
 
                     if any(~all_valid)
                         valid(i) = false;
 %                         disp("SV - Sphere collision")
 %                             show(obj.Robot_sc, state); hold on;plotJointMotion(obj.Robot_sc, state, obj.Environment, obj.params)
 %                         plotJointMotion(obj.Robot_sc, state, obj.Environment, obj.params)
+%                         plot3(xyz_base(:,1),xyz_base(:,2),xyz_base(:,3),"*r")
                         return;
 %                         disp('Violated')
                     end

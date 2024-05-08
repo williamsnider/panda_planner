@@ -28,7 +28,7 @@ classdef CustomParameters
  window_size = 50; % Sliding window average for cartesian paths (reduces jerk)
 
  % Path planning
- validationDistance = 0.001 % Used in RRT planner
+ validationDistance = 0.01 % Used in RRT planner
  checkSteps = 250  % ms; every 250ms is checked by motionCheck for environmental collisions
  checkProportion = 0.05 % Proportion of states that are double checked for kinematic constraints and self/environment collisiosn
  smoothing_window_size = 100 % Smooths out joint-to-joint motions
@@ -36,6 +36,11 @@ classdef CustomParameters
  
     % Joint positions
  q_home = [-0.0121707, -0.561084, 0.00127942, -2.60702, -0.0211893, 2.03285, 0.802306, 0.01, 0.01];
+ 
+ 
+ % Model held shapes as cylinders
+ cylinderRadius = 0.025;  % Length of the cylinder
+ cylinderLength = 0.05;  % Radius of the cylinder
  %
  %  monkeyXYZ = [-0.62 -0.0 0.40]; % from Neo's perspective +X: towards far wall, +Y: towards left, +Z: towards ceiling
  %  pullXYZ = [-0.62 -0.125 0.40];
@@ -52,6 +57,18 @@ classdef CustomParameters
  %  eulHigherSlots = [0 pi/2 0]; % blue out, red down
  %  eulLowerSlots = [0 3*pi/2 pi]; % blue out red up
 
+
+ % Staging box - this is the region near the staging area where there are
+ % no shelves. Because the sphere assumes there would be a shelf, including
+ % this separate area as part of manipulatorstatevalidatorsphere lets paths
+ % be planned here. It is important to keep an additional collision object
+ % representing the monkey's arm reaching port to avoid colliding with
+ % that. That should be placed in build_collision_environment.m
+staging_box_width = 0.2; 
+staging_box_height = 0.7; 
+staging_box_length = 1.0; 
+staging_box_center = [-0.72, 0.0, 0.325]; % Replace with the desired center coordinates [x, y, z]
+            
 
 
  Z_list

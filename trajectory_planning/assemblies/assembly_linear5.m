@@ -18,8 +18,6 @@ body_names = c.body_names;
 panda_sc = c.panda_sc;
 panda_ec = c.panda_ec;
 env = c.env;
-triObj = c.triObj;
-cylinderRadius = c.cylinderRadius;
 
 %% Do inverse kinematics for shape positions
 XYZ_list = [];
@@ -77,21 +75,32 @@ ik.SolverParameters.MaxIterations = 1000;
 
 
 %% Chose XYZ
-XYZ = [-0.62, 0.18, 0.5207];
-q_arr = [];
+% XYZ = [-0.62, 0.18, 0.5207];
+XYZ = [-0.62, 0.10, 0.5207];
 
+q = randomConfiguration(panda_sc);
+q(8:9) = 0.01;
+
+
+q_arr = [];
 for body_num = 1:numel(body_names)
     body_name = body_names{body_num};
     for theta_num = 1:numel(theta_list)
         theta = theta_list(theta_num);
 
+        initialGuess = q; % Use last as seed
+
+
         attempt_num = 1;
         while attempt_num < 10
-            [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik);
+            [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
             if (strcmp(solnInfo.Status, "success") && ~checkCollision(panda_sc, q))
                 break
             end
 
+            % Try again with new seed
+            initialGuess = randomConfiguration(panda_sc);
+            initialGuess(8:9) = 0.01;
             attempt_num = attempt_num + 1;
         end
 
@@ -116,11 +125,42 @@ for body_num = 1:numel(body_names)
     end
 end
 
+%% Remove joint limit constraints
+for body_num = 1:7
+    panda_sc.Bodies{body_num}.Joint.PositionLimits = c.panda_sc_orig.Bodies{body_num}.Joint.PositionLimits;
+    panda_ec.Bodies{body_num}.Joint.PositionLimits = c.panda_ec_orig.Bodies{body_num}.Joint.PositionLimits;
+end
+
+
 %% Simulate joint motion
+traj_arr = {};
 for row = 2:size(q_arr,1)
+    disp(row)
     start = q_arr(row-1,:);
     goal = q_arr(row,:);
     
+    % Use original joint limits
     [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
+    traj_arr{end+1} = traj;
+
+
+end
+save("traj_arr","traj_arr")
+
+
+%% Plot joint motion in steps
+for i = 1:numel(traj_arr)
+    traj = traj_arr{i};
+    plotJointMotion(panda_sc, traj, env, params)
+    input("")
 end
 
+
+
+all_traj = [];
+
+for i= 1:numel(traj_arr)
+    all_traj = [all_traj;traj_arr{i}];
+end
+save("all_traj","all_traj")
+plotJointMotion(panda_sc, all_traj, env, params)
