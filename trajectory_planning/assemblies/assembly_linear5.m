@@ -246,6 +246,88 @@ for i = 1:numel(arr_cell)
     input("")
 end
 
+%% Generate name_list
+letters = ["A","B","C","D"];
+name_list = [];
+for i=1:numel(letters)
+    letter = letters(i);
+    for j = 0:3
+        name_list = [name_list, strcat(letter,num2str(j))];
+    end
+end
+
+
+%% Write CSV's
+SAVE_DIR = "trajectories/";
+PREFIX = "20240509";
+
+speed_list = ["10","40","70"];
+for speed_num = 1:numel(speed_list)
+    speed_factor = speed_list(speed_num);
+    arr_name = strcat("home_to_staging_traj_arr_",speed_factor);
+    arr_name = char(arr_name);
+    arr = eval(arr_name);
+    for i=1:numel(arr)
+        
+        % home to staging
+        fname = strcat(SAVE_DIR,PREFIX,"_home_to_staging", name_list(i),"_",speed_factor,"%.csv")
+        traj = arr{i};
+        writematrix(traj(:, 1:7), fname)
+    
+        % staging to home
+        traj=flip(traj,1);
+        fname = strcat(SAVE_DIR,PREFIX,"_staging", name_list(i),"_to_home_",speed_factor,"%.csv")
+        writematrix(traj(:, 1:7), fname)
+    
+    end
+end
+
+% 
+% for n2 = 2:numel(name_list)
+%     n1 = n2-1;
+
+
+speed_list = ["10","40","70"];
+for speed_num = 1:numel(speed_list)
+    speed_factor = speed_list(speed_num);
+    arr_name = strcat("traj_arr_",speed_factor);
+    arr_name = char(arr_name);
+    arr = eval(arr_name);
+    for i=1:numel(arr)
+        
+        name1 = name_list(i);
+        name2 = name_list(i+1);
+
+        % name1 to name2
+        fname = strcat(SAVE_DIR,PREFIX,"_staging",name1,"_to_staging",name2,"_",speed_factor,"%.csv")
+        traj = arr{i};
+        writematrix(traj(:, 1:7), fname)
+    
+        % name2 to name1
+        traj=flip(traj,1);
+        fname = strcat(SAVE_DIR,PREFIX,"_staging",name2,"_to_staging",name1,"_",speed_factor,"%.csv")
+        writematrix(traj(:, 1:7), fname)
+    
+    end
+end
+% end
+
+
+% Plot forward
+for n2=2:numel(name_list)
+    n1 = n2-1;
+
+    name1 = name_list(n1);
+    name2 = name_list(n2);
+    
+    fname = strcat(SAVE_DIR,PREFIX,"_staging",name1,"_to_staging",name2,"_",speed_factor,"%.csv");
+    plotCSV(panda_sc, fname, env, params);
+    input("")
+end
+
+
+
+
 all_traj = [];
 
 for i= 1:numel(traj_arr)
