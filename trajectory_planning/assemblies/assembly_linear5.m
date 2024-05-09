@@ -78,8 +78,7 @@ ik.SolverParameters.MaxIterations = 1000;
 % XYZ = [-0.62, 0.18, 0.5207];
 XYZ = [-0.62, 0.10, 0.5207];
 
-q = randomConfiguration(panda_sc);
-q(8:9) = 0.01;
+q = [1.798459128682102   1.552800000000000   1.402202106961650  -2.118002688471622   1.497955826674127   1.417562303241438   0.791853618601684   0.010000000000000   0.010000000000000];
 
 
 q_arr = [];
@@ -133,29 +132,119 @@ end
 
 
 %% Simulate joint motion
-traj_arr = {};
-for row = 2:size(q_arr,1)
+num_bodies = numel(body_names);
+num_traj = num_bodies * 4 - 1;
+traj_arr_10 = cell(num_traj,1);
+traj_arr_40 = cell(num_traj,1);
+traj_arr_70 = cell(num_traj,1);
+path_arr = cell(num_traj,1);
+
+parfor row = 2:size(q_arr,1)
     disp(row)
     start = q_arr(row-1,:);
     goal = q_arr(row,:);
-    
-    % Use original joint limits
-    [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params);
-    traj_arr{end+1} = traj;
+    params_copy = params;
 
+    % 10% max speed
+    params_copy.vScale = 0.1;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+
+    [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params_copy);
+    path_arr{row-1} = planned_path;
+    traj_arr_10{row-1} = traj;
+    
+    % 40% max speed
+    params_copy.vScale = 0.4;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+    traj = joint_path_to_traj(planned_path, params_copy);
+    assert(checkTrajectory(traj, start, goal, params_copy)); % Check
+    traj_arr_40{row-1} = traj;
+
+    % 70% max speed
+    params_copy.vScale = 0.7;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+    traj = joint_path_to_traj(planned_path, params_copy);
+    assert(checkTrajectory(traj, start, goal, params_copy)); % Check
+    traj_arr_70{row-1} = traj;
 
 end
-save("traj_arr","traj_arr")
+
+save("traj_arr_10","traj_arr_10")
+save("traj_arr_40","traj_arr_40")
+save("traj_arr_70","traj_arr_70")
+save("path_arr", "path_arr")
+
+%% Save trajectories
+letters = ["A","B","C","D","E"];
+
+
 
 
 %% Plot joint motion in steps
-for i = 1:numel(traj_arr)
-    traj = traj_arr{i};
+arr_cell = traj_arr_70;
+for i = 1:numel(arr_cell)
+    traj = arr_cell{i};
     plotJointMotion(panda_sc, traj, env, params)
     input("")
 end
 
+%% Compare lengths
+for i = 1:num_traj
+    result = strcat(num2str(i),": ", num2str(size(traj_arr_10{i},1)), " ",num2str(size(traj_arr_40{i},1)), " ",num2str(size(traj_arr_70{i},1)), " ");
+    disp(result)
+end
 
+
+%% home to staging
+home_to_staging_traj_arr_10 = cell(num_bodies*4,1);
+home_to_staging_traj_arr_40 = cell(num_bodies*4,1);
+home_to_staging_traj_arr_70 = cell(num_bodies*4,1);
+home_to_staging_path_arr = cell(num_bodies*4,1);
+
+parfor row = 1:size(q_arr,1)
+    disp(row)
+    params_copy = params;
+
+    start = params_copy.q_home;
+    goal = q_arr(row,:);
+    params_copy = params;
+
+    % 10% max speed
+    params_copy.vScale = 0.1;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+
+    [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params_copy);
+    home_to_staging_path_arr{row} = planned_path;
+    home_to_staging_traj_arr_10{row} = traj;
+    
+    % 40% max speed
+    params_copy.vScale = 0.4;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+    traj = joint_path_to_traj(planned_path, params_copy);
+    assert(checkTrajectory(traj, start, goal, params_copy)); % Check
+    home_to_staging_traj_arr_40{row} = traj;
+
+    % 70% max speed
+    params_copy.vScale = 0.7;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+    traj = joint_path_to_traj(planned_path, params_copy);
+    assert(checkTrajectory(traj, start, goal, params_copy)); % Check
+    home_to_staging_traj_arr_70{row} = traj;
+
+end
+
+
+save("home_to_staging_traj_arr_10","home_to_staging_traj_arr_10")
+save("home_to_staging_traj_arr_40","home_to_staging_traj_arr_40")
+save("home_to_staging_traj_arr_70","home_to_staging_traj_arr_70")
+save("home_to_staging_path_arr", "home_to_staging_path_arr")
+
+arr_cell = home_to_staging_traj_arr_70;
+for i = 1:numel(arr_cell)
+    traj = arr_cell{i};
+    plotJointMotion(panda_sc, traj, env, params)
+    input("")
+end
 
 all_traj = [];
 
