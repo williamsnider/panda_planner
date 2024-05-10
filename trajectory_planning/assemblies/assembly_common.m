@@ -4,8 +4,8 @@ function c = assembly_common(assembly_type, num_bodies, params)
 c = struct();
 
 %% Inputs
-JOINT_REDUCTION = 0.2;
-J7_REDUCTION = 0.1;
+JOINT_REDUCTION = 0.3;
+J7_REDUCTION = 0.2;
 cylinderLength = params.cylinderLength;
 cylinderRadius = params.cylinderRadius;
 cylinderSpacing = 0.075; % (linear array)
@@ -44,7 +44,10 @@ oldLimits = panda_sc.Bodies{body_num}.Joint.PositionLimits;
 newLimits = [0, oldLimits(2)];
 panda_sc.Bodies{body_num}.Joint.PositionLimits = newLimits;
 
-
+body_num = 2;
+oldLimits = panda_sc.Bodies{body_num}.Joint.PositionLimits;
+newLimits = [0, oldLimits(2)];
+panda_sc.Bodies{body_num}.Joint.PositionLimits = newLimits;
 
 
 
