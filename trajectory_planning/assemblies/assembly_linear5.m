@@ -185,7 +185,7 @@ num_positions = size(q_arr, 1);
 path_cell = cell(num_positions, num_positions);
 traj_70_cell = cell(num_positions, num_positions);
 
-for pos1 = 1:2
+for pos1 = 1:num_positions
     parfor pos2 = pos1:num_positions
         disp(strcat(num2str(pos1)," " ,num2str(pos2)));
         if pos1 == pos2
@@ -216,6 +216,22 @@ for i = 1:size(traj_70_cell,1)
     end
 
 end
+
+% Compare lengths
+traj_lengths = traj_70_lengths(:);
+traj_lengths = traj_lengths(traj_lengths>0);
+hist(traj_lengths, 30)
+
+same_lengths = diag(traj_70_lengths,1)(1:2:end)
+
+idx = 5;
+plotJointMotion(panda_sc, traj_70_cell{idx,idx+1},env,params)
+
+row = 1;
+q_arr(row:row+1,:)
+
+
+%% Substitute short for multi-segment
 
 
 %% Simulate joint motion
