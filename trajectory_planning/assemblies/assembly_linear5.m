@@ -8,7 +8,8 @@ params = CustomParameters();
 warning('off', 'all');
 
 % Set random stream for reproducibility
-stream = RandStream('mt19937ar', 'Seed', 123);
+seedval = 123;
+stream = RandStream('mt19937ar', 'Seed', seedval);
 RandStream.setGlobalStream(stream);
 
 %% Load common assembly parameters
@@ -81,11 +82,11 @@ theta_list = -pi/4:pi/2:5*pi/4;
 
 
 %% Chose XYZ
+stream = RandStream('mt19937ar', 'Seed', seedval);
+RandStream.setGlobalStream(stream);
+
 XYZ = [-0.62 0.1 0.4699];
-
 base_q = [1.7929    1.5528    1.4059   -1.8759    1.5382    1.4081    2.6132    0.0100    0.0100];
-
-
 q_arr = [];
 for body_num = 1:numel(body_names)
     body_name = body_names{body_num};
@@ -96,6 +97,7 @@ for body_num = 1:numel(body_names)
         sub_arr = [];
         for i = 1:100
             initialGuess = randomConfiguration(panda_sc);
+            initialGuess(8:9) = 0.01;
             [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
 
             if (strcmp(solnInfo.Status, "success") && ~checkCollision(panda_sc, q))
@@ -111,29 +113,29 @@ for body_num = 1:numel(body_names)
         qb = sub_arr(maxidx,:);
 
 
-% 
-%         attempt_num = 1;
-%         while attempt_num < 10
-%             [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
-%             if (strcmp(solnInfo.Status, "success") && ~checkCollision(panda_sc, q))
-%                 break
-%             end
-% 
-%             % Try again with new seed
-%             initialGuess = randomConfiguration(panda_sc);
-%             initialGuess(8:9) = 0.01;
-%             attempt_num = attempt_num + 1;
-%         end
-% 
-%         % Check that ik was successful
-%         if ~strcmp(solnInfo.Status, "success")
-%             disp("IK failed")
-%         end
-% 
-%         % Check that not in collision
-%         if checkCollision(panda_sc, q)
-%             disp("Self collision")
-%         end
+        %
+        %         attempt_num = 1;
+        %         while attempt_num < 10
+        %             [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
+        %             if (strcmp(solnInfo.Status, "success") && ~checkCollision(panda_sc, q))
+        %                 break
+        %             end
+        %
+        %             % Try again with new seed
+        %             initialGuess = randomConfiguration(panda_sc);
+        %             initialGuess(8:9) = 0.01;
+        %             attempt_num = attempt_num + 1;
+        %         end
+        %
+        %         % Check that ik was successful
+        %         if ~strcmp(solnInfo.Status, "success")
+        %             disp("IK failed")
+        %         end
+        %
+        %         % Check that not in collision
+        %         if checkCollision(panda_sc, q)
+        %             disp("Self collision")
+        %         end
 
         q_arr = [q_arr;qa;qb];
 
@@ -155,27 +157,30 @@ end
 %     [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
 %     sub_arr = [sub_arr;q];
 % end
-% 
+%
 % % Choose min and max for joint1
 % [submin, minidx] = min(sub_arr(:,1));
 % [submax, maxidx] = max(sub_arr(:,1));
 % qa = sub_arr(minidx,:);
 % qb = sub_arr(maxidx,:);
-% 
+%
 % params_copy = params;
-% 
+%
 % start = qa;
 % goal = qb;
 % params_copy = params;
-% 
+%
 % % 10% max speed
 % params_copy.vScale = 0.2;
 % params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-% 
+%
 % [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params_copy);
-% 
+%
 
 %% Remove joint limit constraints
+stream = RandStream('mt19937ar', 'Seed', seedval);
+RandStream.setGlobalStream(stream);
+
 for body_num = 1:7
     panda_sc.Bodies{body_num}.Joint.PositionLimits = c.panda_sc_orig.Bodies{body_num}.Joint.PositionLimits;
     panda_ec.Bodies{body_num}.Joint.PositionLimits = c.panda_ec_orig.Bodies{body_num}.Joint.PositionLimits;
@@ -199,15 +204,31 @@ for pos1 = 1:num_positions
         params_copy = params;
         params_copy.vScale = 0.7;
         params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-    
+
         [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params_copy);
-        
+
         path_cell{pos1,pos2} = planned_path;
-%         path_cell{pos2,pos1} = flip(planned_path,1);
         traj_70_cell{pos1,pos2} = traj;
-%         traj_70_cell{pos2,pos1} = flip(traj,1);
     end
 end
+save("traj_70_cell","traj_70_cell")
+save("path_cell","path_cell")
+
+%% Mirror
+arr = zeros(size(traj_70_cell,1));
+for i = 1:num_positions
+    for j = i:num_positions
+        if i==j
+            continue
+        end
+
+        % Insert into array
+        traj_70_cell{j,i} =  flip(traj_70_cell{i,j},1);
+        path_cell{j,i} = flip(path_cell{i,j},1);
+
+    end
+end
+
 
 traj_70_lengths = zeros(size(traj_70_cell));
 for i = 1:size(traj_70_cell,1)
@@ -219,19 +240,144 @@ end
 
 % Compare lengths
 traj_lengths = traj_70_lengths(:);
-traj_lengths = traj_lengths(traj_lengths>0);
-hist(traj_lengths, 30)
+% histogram(traj_lengths, 30); hold on;
+% title("Duration of Motion")
+% xlabel('Duration (ms)')
+% ylabel('Frequency')
+%
+same_lengths = diag(traj_70_lengths,1);
+same_lengths = same_lengths(1:2:end);
 
-same_lengths = diag(traj_70_lengths,1)(1:2:end)
-
-idx = 5;
-plotJointMotion(panda_sc, traj_70_cell{idx,idx+1},env,params)
-
-row = 1;
-q_arr(row:row+1,:)
+% idx = 5;
+% plotJointMotion(panda_sc, traj_70_cell{idx,idx+1},env,params)
+%
+% row = 1;
+% q_arr(row:row+1,:)
 
 
 %% Substitute short for multi-segment
+stream = RandStream('mt19937ar', 'Seed', seedval);
+RandStream.setGlobalStream(stream);
+
+new_traj = traj_70_cell;
+new_path = path_cell;
+
+target_min = 2000;
+target_max = 4000;
+for r = 1:num_positions
+    for c = r:num_positions
+
+
+        traj = traj_70_cell{r,c};
+        traj_length = size(traj,1);
+        
+        planned_path = path_cell{r,c};
+        path_num = size(planned_path,1);
+
+        % Ensure minimum length AND at least 1 intermediate configuration
+        if ((traj_length>=target_min)  && (path_num>2))
+            continue
+        end
+
+        disp(strcat(num2str(r)," ", num2str(c)))
+
+
+
+        possible_seq = [];
+        for i1 = 1:32
+
+                if (i1==r) || (i1==c) 
+                    continue
+                end
+
+                seq = [r,i1,c];
+                possible_seq = [possible_seq;seq];
+        
+        end
+
+        shuffled_seq = possible_seq(randperm(size(possible_seq,1)),:);
+
+        found_seq = false;
+        for seq_num = 1:size(shuffled_seq)
+
+            seq = shuffled_seq(seq_num,:);
+            seq = seq(seq>0);  % Remove zero idx; shortens to just 1 intermediate
+
+            seq_length = 0;
+            seq_path = [];
+            seq_traj = [];
+            for idx_a = 1:(numel(seq)-1)
+                idx_b= idx_a+1;
+
+                seq_a = seq(idx_a);
+                seq_b = seq(idx_b);
+
+                sub_path = path_cell{seq_a, seq_b};
+                if idx_a == 1
+                    seq_path = [seq_path; sub_path];
+                else
+                    seq_path = [seq_path;sub_path(2:end,:)];
+                end
+
+                traj = traj_70_cell{seq_a, seq_b};
+                seq_traj = [seq_traj;traj];
+
+                sub_length = size(traj,1);
+                seq_length = seq_length + sub_length;
+            end
+
+
+
+            if (target_min < seq_length) && (target_max > seq_length)
+
+                % Insert new path
+                new_path{r,c} = seq_path;
+                new_path{c,r} = flip(seq_path,1);
+
+                % Insert new traj
+                new_traj{r,c} = seq_traj;
+                new_traj{c,r} = flip(seq_traj,1);
+                
+                % Exit loop
+                found_seq=true;
+                break
+            end
+
+
+        end
+        if ~found_seq
+                disp(strcat("Failed for ",num2str(r)," ", num2str(c)))
+        end
+
+    end
+end
+
+new_lengths = zeros(size(traj_70_cell));
+for i = 1:size(new_traj,1)
+    for j = 1:size(new_traj,2)
+        new_lengths(i,j) = size(new_traj{i,j},1);
+    end
+
+end
+
+new_same_lengths = diag(new_lengths,1);
+new_same_lengths = new_same_lengths(1:2:end);
+new_same_lengths = [new_same_lengths; diag(new_lengths)];
+
+% Compare lengths
+new_lengths = new_lengths(:);
+histogram(new_lengths, 30); hold on;
+title("Duration of Motion")
+xlabel('Duration (ms)')
+ylabel('Frequency')
+
+
+
+
+hold on; 
+hist(new_same_lengths)
+
+
 
 
 %% Simulate joint motion
