@@ -12,5 +12,10 @@ temp/*
 */*/*/temp/*
 */*/*/*/temp/s
 
+trajectory_planning/assemblies/trajectories/*.csv
+trajectory_planning/assemblies/*.mat
+
+trajectory_planning/robot/collision_mesh_points.mat
+
 archive/collision*
 archive/kinematics*

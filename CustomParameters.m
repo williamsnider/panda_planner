@@ -28,7 +28,7 @@ classdef CustomParameters
  window_size = 50; % Sliding window average for cartesian paths (reduces jerk)
 
  % Path planning
- validationDistance = 0.01 % Used in RRT planner
+ validationDistance = 0.001 % Used in RRT planner
  checkSteps = 250  % ms; every 250ms is checked by motionCheck for environmental collisions
  checkProportion = 0.05 % Proportion of states that are double checked for kinematic constraints and self/environment collisiosn
  smoothing_window_size = 100 % Smooths out joint-to-joint motions
