@@ -75,37 +75,26 @@ for path_num =1:numel(ec_paths)
     path_name = ec_paths{path_num};
 %     disp(path_name)
     traj = getfield(paths_struct, path_name);
-    traj_steps = size(traj, 1);
-    traj_gap = params.checkSteps;
-    for timestep = [1:traj_gap:traj_steps, traj_steps] % Start + check steps + end
-        if ~sv.isStateValid(traj(timestep,:))
-%             show(panda_sc, traj(timestep,:)); hold on;
-%             plotJointMotion(panda_sc, traj(timestep,:), env, params);
-%             disp(timestep)
-            collision_count = collision_count + 1;
-        end
-    end
-
-    if collision_count > 1
-                    valid = false;
-        disp("motionCheck - env collision with number of instances: "+num2str(collision_count))
+    has_environment_collisions = checkTrajForEnvironmentCollisions(sv, traj, params);
+    if has_environment_collisions
+        disp("motionCheck - env collision")
+        valid = false;
         return
     end
+
 end
 
 %% Check self collisions for all positions
 for path_num = 1:numel(all_paths)
     path_name = all_paths{path_num};
     traj = getfield(paths_struct, path_name);
-    traj_steps = size(traj,1);
-    traj_gap = params.checkSteps;
-    for timestep = [1:traj_gap:traj_steps, traj_steps] % Start + check steps + end
-        if is_robot_in_self_collision_ignore_pairs(panda_sc, traj(timestep,:))
-            valid=false;
-            disp("motionCheck - self collision")
-            return
-        end
+    has_self_collisions = checkTrajForSelfCollisions(panda_sc, traj, params);
+    if has_self_collisions
+        valid=false;
+        disp("motionCheck - self collision")
+        return
     end
+
 
 end
 
