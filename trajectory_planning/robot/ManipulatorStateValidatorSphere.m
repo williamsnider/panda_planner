@@ -1,13 +1,13 @@
 classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAccess
-%This class is for internal use only. It may be removed in the future.
+    %This class is for internal use only. It may be removed in the future.
 
-%ManipulatorStateValidator Validator for a joint configuration of a rigid body tree
-%   The validator takes an instance of a robotics.manip.internal.ManipStateSpace
-%   and validates the configuration against the environment.
+    %ManipulatorStateValidator Validator for a joint configuration of a rigid body tree
+    %   The validator takes an instance of a robotics.manip.internal.ManipStateSpace
+    %   and validates the configuration against the environment.
 
-%   Copyright 2020-2022 The MathWorks, Inc.
+    %   Copyright 2020-2022 The MathWorks, Inc.
 
-%#codegen
+    %#codegen
 
     properties
         %StateSpace The input ManipStateSpace
@@ -40,15 +40,15 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
         radius_offset
         collision_mesh_points
         ismotionvalidcount=0
-        
+
     end
 
     methods
         function obj = ManipulatorStateValidatorSphere(ss, env, validationDistance,radius_offset, params)
-        %ManipulatorStateValidator Constructor
+            %ManipulatorStateValidator Constructor
 
-        %There is no need to check for validity of the input state space ss
-        %as the API is internal.
+            %There is no need to check for validity of the input state space ss
+            %as the API is internal.
             obj.StateSpace = ss;
             obj.Environment = env;
             obj.ValidationDistance = validationDistance;
@@ -56,22 +56,22 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
             obj.Robot_ec = ss.Robot_ec;
             obj.params = params;
 
-            % Sphere checking parameters 
-            obj.sphere_origin = obj.params.sphere_origin;  
-            obj.sphere_radius = obj.params.sphere_radius; 
+            % Sphere checking parameters
+            obj.sphere_origin = obj.params.sphere_origin;
+            obj.sphere_radius = obj.params.sphere_radius;
             obj.radius_offset = radius_offset;
             data = load("collision_mesh_points.mat","collision_mesh_points");
             obj.collision_mesh_points = data.collision_mesh_points;
         end
 
         function valid = isStateValid(obj, state)
-        %isStateValid Validate the input joint state
-        %   The method checks if the input state of the rigid body tree is
-        %   in collision
+            %isStateValid Validate the input joint state
+            %   The method checks if the input state of the rigid body tree is
+            %   in collision
 
-        %A state is valid if the robot is not in collision. Calling
-        %"checkWorldCollision" and "checkSelfCollision" with "isExhaustive" as
-        %false to early exit at the first encounter of collision.
+            %A state is valid if the robot is not in collision. Calling
+            %"checkWorldCollision" and "checkSelfCollision" with "isExhaustive" as
+            %false to early exit at the first encounter of collision.
             numStates = size(state, 1);
             valid = true(numStates, 1);
 
@@ -94,7 +94,7 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
                     xyzw = [xyz, ones(size(xyz,1),1)];  % homogenous coordinates;
 
                     foundMatch = false;
-                    
+
                     % Test if base
                     if strcmp(body_name, robot_base_name)
                         foundMatch = true;
@@ -142,12 +142,12 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
 
                     if any(~all_valid)
                         valid(i) = false;
-%                         disp("SV - Sphere collision")
-%                             show(obj.Robot_sc, state); hold on;plotJointMotion(obj.Robot_sc, state, obj.Environment, obj.params)
-%                         plotJointMotion(obj.Robot_sc, state, obj.Environment, obj.params)
-%                         plot3(xyz_base(:,1),xyz_base(:,2),xyz_base(:,3),"*r")
+                        %                         disp("SV - Sphere collision")
+                        %                             show(obj.Robot_sc, state); hold on;plotJointMotion(obj.Robot_sc, state, obj.Environment, obj.params)
+                        %                         plotJointMotion(obj.Robot_sc, state, obj.Environment, obj.params)
+                        %                         plot3(xyz_base(:,1),xyz_base(:,2),xyz_base(:,3),"*r")
                         return;
-%                         disp('Violated')
+                        %                         disp('Violated')
                     end
                 end
             end
@@ -155,21 +155,21 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
 
 
 
-            % Check if within 
+            % Check if within
             for i = 1:numStates
 
                 % Check self collision with robot_sc and environment
-                
+
                 collision_status = checkCollision(obj.Robot_ec, state, obj.Environment, "SkippedSelfCollisions","parent");
                 is_colliding_with_world = collision_status(2);
                 is_colliding_with_self = is_robot_in_self_collision_ignore_pairs(obj.Robot_sc, state);
 
-%                 isColliding = (checkWorldCollision(obj.Robot_ec.TreeInternal, tTree, baseTform, obj.Environment, false)) || ...
-%                     (~obj.IgnoreSelfCollision && ...
-%                      checkSelfCollision(obj.Robot_sc.TreeInternal, tTree, baseTform, false, ...
-%                                         obj.SkippedSelfCollisionType));
+                %                 isColliding = (checkWorldCollision(obj.Robot_ec.TreeInternal, tTree, baseTform, obj.Environment, false)) || ...
+                %                     (~obj.IgnoreSelfCollision && ...
+                %                      checkSelfCollision(obj.Robot_sc.TreeInternal, tTree, baseTform, false, ...
+                %                                         obj.SkippedSelfCollisionType));
                 if is_colliding_with_self || is_colliding_with_world
-                    
+
                     if is_colliding_with_world
                         disp("SV - World collision")
                     elseif is_colliding_with_self
@@ -182,39 +182,39 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
 
             end
         end
-            
 
 
 
 
-                % Plot to visualize
-% plotJointMotion(obj.Robot_sc, state(i,:), obj.Environment, obj.params)
+
+        % Plot to visualize
+        % plotJointMotion(obj.Robot_sc, state(i,:), obj.Environment, obj.params)
 
 
-% %                 Plot to visualize
-%                 show(obj.Robot_ec, state(i,:), 'Visuals', 'off', 'Collisions','on')
-%                 hold on;
-%                 plot3(all_xyz(:,1), all_xyz(:,2), all_xyz(:,3), 'r*')
-% 
-%                 [x,y,z] = sphere;
-%                 x = x*obj.sphere_radius + obj.sphere_origin(1);
-%                 y = y*obj.sphere_radius + obj.sphere_origin(2);
-%                 z = z*obj.sphere_radius + obj.sphere_origin(3);
-%                 surf(x,y,z, 'EdgeColor','none','FaceAlpha',0.2,'FaceColor',[0.3010, 0.7450, 0.9330])
+        % %                 Plot to visualize
+        %                 show(obj.Robot_ec, state(i,:), 'Visuals', 'off', 'Collisions','on')
+        %                 hold on;
+        %                 plot3(all_xyz(:,1), all_xyz(:,2), all_xyz(:,3), 'r*')
+        %
+        %                 [x,y,z] = sphere;
+        %                 x = x*obj.sphere_radius + obj.sphere_origin(1);
+        %                 y = y*obj.sphere_radius + obj.sphere_origin(2);
+        %                 z = z*obj.sphere_radius + obj.sphere_origin(3);
+        %                 surf(x,y,z, 'EdgeColor','none','FaceAlpha',0.2,'FaceColor',[0.3010, 0.7450, 0.9330])
 
 
 
         function [isValid, lastValid] = isMotionValid(obj, state1, state2)
-%             disp(obj.ismotionvalidcount)
+            %             disp(obj.ismotionvalidcount)
             obj.ismotionvalidcount = obj.ismotionvalidcount+1;
-        %isMotionValid Validate the motion between two configurations
-        %   The function interpolates between the input configurations and
-        %   validates each state in the interpolation.  Note that this
-        %   function doesn't output lastValid as in the case of a
-        %   nav.StateValidator as this validator will be used for an RRT
-        %   based planner
+            %isMotionValid Validate the motion between two configurations
+            %   The function interpolates between the input configurations and
+            %   validates each state in the interpolation.  Note that this
+            %   function doesn't output lastValid as in the case of a
+            %   nav.StateValidator as this validator will be used for an RRT
+            %   based planner
 
-        %Assume that there is no collision and the motion is valid
+            %Assume that there is no collision and the motion is valid
             isValid = true;
             lastValid = nan(size(state1));
 
@@ -234,10 +234,26 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
             % (inclusive)
             ratios = [distances/dist, 1];
 
-            interpStates = obj.StateSpace.interpolate(state1, state2, ratios);
+            % We cannot assume that linearly interpolating between state1
+            % and state2 is sufficient for testing the validity of each state. Because we have kinematic
+            % constraints,the actual trajectory calculated from the path
+            % will be S-shaped for each joint.Therefore we must use the
+            % actual trajectory as the interpolation.
+            obj.params.vScale = 0.1;
+            obj.params.vMaxAll = obj.params.vMaxAllAbsolute*obj.params.vScale;
+            traj = joint_path_to_traj([state1;state2], obj.params);
+            interpStates = traj;
+            checkSteps = 10;
+            interpStates = interpStates(1:checkSteps:end,:);
+
+            % linearly-spaced interpolation
+            % interpStates = obj.StateSpace.interpolate(state1, state2, ratios);
+
+
             for i = 1:size(interpStates, 1)
                 if(~obj.isStateValid(interpStates(i, :)))
                     isValid = false;
+                    %                     q = [2.035955308309092   1.263205663847605   1.090045347062351  -1.798688943547083   1.770982971333016   1.048707473294003  -2.124563290973329   0.010000000000000 0.010000000000000];
                     return;
                 end
                 lastValid = interpStates(i,:);

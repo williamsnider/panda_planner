@@ -304,33 +304,65 @@ traj_arr_10 = cell(size(traj_arr_70));
 traj_arr_40 = cell(size(traj_arr_70));
 
 for r = 1:num_positions
-    parfor c = 1:num_positions
+    for c = 1:num_positions
     
+    if (r~=4) || (c~=11)
+        continue
+    end
+
+    % Debug 
+    params_copy = params;
+    params_copy.vScale = 0.7;
+    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+    orig_path = new_path{4,11};
+    i = 1;
+    start = orig_path(i,:);
+    goal = orig_path(i+1,:);
+    pp = joint_plan_path(panda_ec, panda_sc, env, start, goal, params);
+    traj_1 = joint_path_to_traj(pp, params_copy);
+    i = 2;
+    start = orig_path(i,:)
+    goal = orig_path(i+1,:)
+    pp = joint_plan_path(panda_ec, panda_sc, env, start, goal, params);
+    traj_2 = joint_path_to_traj(pp, params_copy);
+    traj_12 = [traj_1;traj_2];
+    assert(~checkTrajForCollisions(sv, panda_sc, traj_12, params));
+
+
     disp(strcat(num2str(r)," ", num2str(c)))
 
-    planned_path = path_arr{r,c};
-    params_copy = params;
+    try
+        planned_path = path_arr{r,c};
+        params_copy = params;
+    
+        % 10%
+        params_copy.vScale = 0.1;
+        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        traj = joint_path_to_traj(planned_path, params_copy);
+        assert(checkTrajectory(traj, planned_path(1,:), planned_path(end,:), params_copy)); % Check
+        assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
+        traj_arr_10{r,c} = traj;
+    
+        % 40%
+        params_copy.vScale = 0.4;
+        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        traj = joint_path_to_traj(planned_path, params_copy);
+        assert(checkTrajectory(traj,planned_path(1,:), planned_path(end,:), params_copy)); % Check
+        assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
+        traj_arr_40{r,c} = traj;
+    
+        % 70% - double check
+        traj = traj_arr_70{r,c};
+        params_copy.vScale = 0.7;
+        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        assert(checkTrajectory(traj,planned_path(1,:), planned_path(end,:), params_copy)); % Check
+        assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
+    catch
+        disp(strcat("Failed for ",num2str(r)," ", num2str(c)))
+        assert(false)
 
-    % 10%
-    params_copy.vScale = 0.1;
-    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-    traj = joint_path_to_traj(planned_path, params_copy);
-    assert(checkTrajectory(traj, planned_path(1,:), planned_path(end,:), params_copy)); % Check
-    assert(checkTrajForCollisions(sv, panda_sc, traj, params));
-    traj_arr_10{r,c} = traj;
+    end
 
-    % 40%
-    params_copy.vScale = 0.4;
-    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-    traj = joint_path_to_traj(planned_path, params_copy);
-    assert(checkTrajectory(traj,planned_path(1,:), planned_path(end,:), params_copy)); % Check
-    assert(checkTrajForCollisions(sv, panda_sc, traj, params));
-    traj_arr_40{r,c} = traj;
-
-    % 70% - double check
-    traj = traj_arr_70{r,c};
-    assert(checkTrajectory(traj,planned_path(1,:), planned_path(end,:), params_copy)); % Check
-    assert(checkTrajForCollisions(sv, panda_sc, traj, params));
 
     end
 end

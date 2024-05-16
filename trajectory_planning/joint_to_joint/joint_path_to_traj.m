@@ -16,7 +16,7 @@ for segment_num=1:size(planned_path,1)-1
     all_trajectory = [all_trajectory, segment_trajectory];
 end
 
-% Smooth
+
 all_trajectory = smooth_path(all_trajectory, params.smoothing_window_size);
 
 % Pad ends
