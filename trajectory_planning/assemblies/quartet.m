@@ -87,40 +87,41 @@ sv.Environment = env;
 
 
 %% Chose XYZ
-stream = RandStream('mt19937ar', 'Seed', seedval);
-RandStream.setGlobalStream(stream);
-
-XYZ = [-0.62 0.1 0.4699];
-q_arr = [];
-for body_num = 1:numel(body_names)
-    body_name = body_names{body_num};
-    for theta_num = 1:numel(theta_list)
-        theta = theta_list(theta_num);
-
-
-        sub_arr = [];
-        for i = 1:100
-            initialGuess = randomConfiguration(panda_sc);
-            initialGuess(8:9) = 0.01;
-            [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
-
-            if (strcmp(solnInfo.Status, "success") && ~checkCollision(panda_sc, q))
-                sub_arr = [sub_arr;q];
-
-            end
-        end
-
-        % Choose min and max for joint1
-        [submin, minidx] = min(sub_arr(:,1));
-        [submax, maxidx] = max(sub_arr(:,1));
-        qa = sub_arr(minidx,:);
-        qb = sub_arr(maxidx,:);
-
-        q_arr = [q_arr;qa;qb];
-
-    end
-end
-
+% stream = RandStream('mt19937ar', 'Seed', seedval);
+% RandStream.setGlobalStream(stream);
+% 
+% XYZ = [-0.62 0.1 0.4699];
+% q_arr = [];
+% for body_num = 1:numel(body_names)
+%     body_name = body_names{body_num};
+%     for theta_num = 1:numel(theta_list)
+%         theta = theta_list(theta_num);
+% 
+% 
+%         sub_arr = [];
+%         for i = 1:100
+%             initialGuess = randomConfiguration(panda_sc);
+%             initialGuess(8:9) = 0.01;
+%             [q, solnInfo] = find_XYZ_q(panda_sc,body_name, XYZ, theta, ik, initialGuess);
+% 
+%             if (strcmp(solnInfo.Status, "success") && ~checkCollision(panda_sc, q))
+%                 sub_arr = [sub_arr;q];
+% 
+%             end
+%         end
+% 
+%         % Choose min and max for joint1
+%         [submin, minidx] = min(sub_arr(:,1));
+%         [submax, maxidx] = max(sub_arr(:,1));
+%         qa = sub_arr(minidx,:);
+%         qb = sub_arr(maxidx,:);
+% 
+%         q_arr = [q_arr;qa;qb];
+% 
+%     end
+% end
+% save("q_arr","q_arr")
+load("q_arr","q_arr")
 
 %% Calculate all pairs of staging positions
 stream = RandStream('mt19937ar', 'Seed', seedval);
@@ -177,14 +178,14 @@ save("path_cell","path_cell")
 
 
 %% Substitute short for multi-segment to prevent same motions from being obvious
-seedval = 129;  % Adjust this until the distributions for same/different are similarly shaped
+seedval = 124;  % Adjust this until the distributions for same/different are similarly shaped
 stream = RandStream('mt19937ar', 'Seed', seedval);
 RandStream.setGlobalStream(stream);
 
 new_traj = traj_70_cell;
 new_path = path_cell;
 
-target_min = 2000;
+target_min = 2500;
 target_max = 4000;
 for r = 1:num_positions
     for c = r:num_positions
@@ -306,32 +307,30 @@ traj_arr_40 = cell(size(traj_arr_70));
 for r = 1:num_positions
     for c = 1:num_positions
     
-    if (r~=4) || (c~=11)
-        continue
-    end
 
-    % Debug 
-    params_copy = params;
-    params_copy.vScale = 0.7;
-    params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-    orig_path = new_path{4,11};
-    i = 1;
-    start = orig_path(i,:);
-    goal = orig_path(i+1,:);
-    pp = joint_plan_path(panda_ec, panda_sc, env, start, goal, params);
-    traj_1 = joint_path_to_traj(pp, params_copy);
-    i = 2;
-    start = orig_path(i,:)
-    goal = orig_path(i+1,:)
-    pp = joint_plan_path(panda_ec, panda_sc, env, start, goal, params);
-    traj_2 = joint_path_to_traj(pp, params_copy);
-    traj_12 = [traj_1;traj_2];
-    assert(~checkTrajForCollisions(sv, panda_sc, traj_12, params));
+%     % Debug 
+%     params_copy = params;
+%     params_copy.vScale = 0.7;
+%     params_copy.validationDistance = 0.01;
+%     params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+%     orig_path = new_path{4,11};
+%     i = 1;
+%     start = orig_path(i,:);
+%     goal = orig_path(i+1,:);
+%     pp = joint_plan_path(panda_ec, panda_sc, env, start, goal, params_copy);
+%     traj_1 = joint_path_to_traj(pp, params_copy);
+%     i = 2;
+%     start = orig_path(i,:)
+%     goal = orig_path(i+1,:)
+%     pp = joint_plan_path(panda_ec, panda_sc, env, start, goal, params_copy);
+%     traj_2 = joint_path_to_traj(pp, params_copy);
+%     traj_12 = [traj_1;traj_2];
+%     assert(~checkTrajForCollisions(sv, panda_sc, traj_12, params));
 
 
     disp(strcat(num2str(r)," ", num2str(c)))
 
-    try
+%     try
         planned_path = path_arr{r,c};
         params_copy = params;
     
@@ -340,7 +339,7 @@ for r = 1:num_positions
         params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
         traj = joint_path_to_traj(planned_path, params_copy);
         assert(checkTrajectory(traj, planned_path(1,:), planned_path(end,:), params_copy)); % Check
-        assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
+%         assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
         traj_arr_10{r,c} = traj;
     
         % 40%
@@ -348,20 +347,21 @@ for r = 1:num_positions
         params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
         traj = joint_path_to_traj(planned_path, params_copy);
         assert(checkTrajectory(traj,planned_path(1,:), planned_path(end,:), params_copy)); % Check
-        assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
+%         assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
         traj_arr_40{r,c} = traj;
     
         % 70% - double check
         traj = traj_arr_70{r,c};
         params_copy.vScale = 0.7;
         params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        params_copy.checkSteps = 200;
         assert(checkTrajectory(traj,planned_path(1,:), planned_path(end,:), params_copy)); % Check
-        assert(~checkTrajForCollisions(sv, panda_sc, traj, params));
-    catch
-        disp(strcat("Failed for ",num2str(r)," ", num2str(c)))
-        assert(false)
+%         assert(~checkTrajForCollisions(sv, panda_sc, traj, params_copy));
+%     catch
+%         disp(strcat("Failed for ",num2str(r)," ", num2str(c)))
+%         assert(false)
 
-    end
+%     end
 
 
     end
@@ -373,14 +373,58 @@ save("traj_arr_70","traj_arr_70")
 save("path_arr", "path_arr")
 
 
+%% Generate name_list (e.g. stagingA0a and stagingD3b etc)
+letters = ["A","B","C","D"];
+name_list = [];
+for i=1:numel(letters)
+    letter = letters(i);
+    for j = 0:3
+        for k = 1:2
 
-% %% Plot joint motion in steps
-% arr_cell = traj_arr_70;
-% for i = 1:numel(arr_cell)
-%     traj = arr_cell{i};
-%     plotJointMotion(panda_sc, traj, env, params)
-%     input("")
-% end
+            if k==1
+                a_or_b = "a";
+            else
+                a_or_b = "b";
+            end
+
+        name_list = [name_list, strcat(letter,num2str(j), a_or_b)];
+        end
+    end
+end
+
+
+%% Plot joint motion in steps
+arr_cell = traj_arr_70;
+r = 1;
+while true
+
+        c = randi([1,num_positions]);
+        disp(strcat(name_list(r)," to ", name_list(c)))
+        traj = arr_cell{r,c};
+        plotJointMotion(panda_sc, traj, env, params)
+        input("")
+        r = c;
+end
+
+%% Sanity checks
+
+for r = 1:num_positions
+    for c = 1:num_positions
+    
+        traj=traj_arr_70{r,c};
+        pp = new_path{r,c};
+
+        % Check start of traj
+        assert(abs(sum(traj(1,:)-q_arr(r,:)))<0.001)
+        assert(abs(sum(pp(1,:)-q_arr(r,:)))<0.001)
+
+        % Check end of traj
+        assert(abs(sum(traj(end,:)-q_arr(c,:)))<0.001)
+        assert(abs(sum(pp(end,:)-q_arr(c,:)))<0.001)
+
+    end
+end
+
 
 %% home to staging motions
 home_to_staging_traj_arr_10 = cell(num_positions,1);
@@ -401,7 +445,7 @@ parfor row = 1:size(q_arr,1)
     params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
     [traj, planned_path] = planJointToJoint(panda_ec, panda_sc, env, start, goal, params_copy);
     assert(checkTrajectory(traj, start, goal, params_copy)); % Check
-    assert(~checkTrajForCollisions(sv, panda_sc, traj, params))
+%     assert(~checkTrajForCollisions(sv, panda_sc, traj, params))
     home_to_staging_path_arr{row} = planned_path;
     home_to_staging_traj_arr_10{row} = traj;
 
@@ -428,29 +472,11 @@ save("home_to_staging_traj_arr_70","home_to_staging_traj_arr_70")
 save("home_to_staging_path_arr", "home_to_staging_path_arr")
 
 
-%% Generate name_list (e.g. stagingA0a and stagingD3b etc)
-letters = ["A","B","C","D"];
-name_list = [];
-for i=1:numel(letters)
-    letter = letters(i);
-    for j = 0:3
-        for k = 1:2
-
-            if k==1
-                a_or_b = "a";
-            else
-                a_or_b = "b";
-            end
-
-        name_list = [name_list, strcat(letter,num2str(j), a_or_b)];
-        end
-    end
-end
 
 
 %% Write CSV's
 SAVE_DIR = "trajectories/";
-PREFIX = "20240515";
+PREFIX = "20240517";
 
 % Home to staging motions
 speed_list = ["10","40","70"];

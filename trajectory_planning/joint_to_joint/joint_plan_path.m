@@ -16,7 +16,7 @@ assert(sv.isStateValid(goal), "Goal joint position is invalid, probably outside 
 % Create simple linear path
 planned_path = [start;goal];
 
-IsDirectValid = isMotionValid(sv, start, goal);
+IsDirectValid = sv.isMotionValid(start, goal);
 
 
 %% Plan path using RRT

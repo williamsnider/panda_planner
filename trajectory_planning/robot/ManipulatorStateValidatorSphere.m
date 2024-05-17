@@ -65,6 +65,8 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
         end
 
         function valid = isStateValid(obj, state)
+
+
             %isStateValid Validate the input joint state
             %   The method checks if the input state of the rigid body tree is
             %   in collision
@@ -158,29 +160,32 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
             % Check if within
             for i = 1:numStates
 
-                % Check self collision with robot_sc and environment
+                % Check for environment collision
+                is_colliding_with_world = checkCollision(obj.Robot_ec, state, obj.Environment, "IgnoreSelfCollision","on");
+                if is_colliding_with_world
+                    disp("SV - World collision")
+                    valid(i) = false;
+                    return
+                end
 
-                collision_status = checkCollision(obj.Robot_ec, state, obj.Environment, "SkippedSelfCollisions","parent");
-                is_colliding_with_world = collision_status(2);
-                is_colliding_with_self = is_robot_in_self_collision_ignore_pairs(obj.Robot_sc, state);
+                % Check for self collisions (ignoring certain adjacent
+                % pairs often incorrectly in self-collision)
 
                 %                 isColliding = (checkWorldCollision(obj.Robot_ec.TreeInternal, tTree, baseTform, obj.Environment, false)) || ...
                 %                     (~obj.IgnoreSelfCollision && ...
                 %                      checkSelfCollision(obj.Robot_sc.TreeInternal, tTree, baseTform, false, ...
                 %                                         obj.SkippedSelfCollisionType));
-                if is_colliding_with_self || is_colliding_with_world
+                is_colliding_with_self = is_robot_in_self_collision_ignore_pairs(obj.Robot_sc, state);
 
-                    if is_colliding_with_world
-                        disp("SV - World collision")
-                    elseif is_colliding_with_self
-                        disp("SV - self collision")
-                    end
-
-                    valid(i) = false;
+                if is_colliding_with_self 
+                   disp("SV - self collision")
+                   valid(i) = false;
                     return
                 end
 
+
             end
+
         end
 
 
@@ -239,21 +244,25 @@ classdef ManipulatorStateValidatorSphere < robotics.manip.internal.InternalAcces
             % constraints,the actual trajectory calculated from the path
             % will be S-shaped for each joint.Therefore we must use the
             % actual trajectory as the interpolation.
-            obj.params.vScale = 0.1;
+            obj.params.vScale = 0.7;
             obj.params.vMaxAll = obj.params.vMaxAllAbsolute*obj.params.vScale;
             traj = joint_path_to_traj([state1;state2], obj.params);
             interpStates = traj;
-            checkSteps = 10;
-            interpStates = interpStates(1:checkSteps:end,:);
+            interpStates = interpStates(1:obj.params.checkSteps:end,:);
 
-            % linearly-spaced interpolation
-            % interpStates = obj.StateSpace.interpolate(state1, state2, ratios);
+            % linearly-spaced interpolation -  use both linear and
+            % kinematically constrained at 70% to cover all bases (linear
+            % can be thought of as having a very low vScale).
+            interpStates = [interpStates; obj.StateSpace.interpolate(state1, state2, ratios)];
 
+            % Shuffle states to fail faster (sample entire trajectory
+            % sooner)
+            interpStatesShuffle = interpStates(randperm(size(interpStates,1)),:);
 
             for i = 1:size(interpStates, 1)
-                if(~obj.isStateValid(interpStates(i, :)))
+                q = interpStatesShuffle(i,:);
+                if(~obj.isStateValid(q))
                     isValid = false;
-                    %                     q = [2.035955308309092   1.263205663847605   1.090045347062351  -1.798688943547083   1.770982971333016   1.048707473294003  -2.124563290973329   0.010000000000000 0.010000000000000];
                     return;
                 end
                 lastValid = interpStates(i,:);

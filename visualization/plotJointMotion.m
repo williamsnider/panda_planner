@@ -119,7 +119,7 @@ for i=1:size(shortAnglesArray, 1)
 %             
 %             h = patch('Vertices', vertices, 'Faces', faces,   'FaceColor', [0, 1, 1], 'FaceAlpha', 0.25, 'EdgeColor', 'none');
 % 
-
+% 
 %         end
 
     end
