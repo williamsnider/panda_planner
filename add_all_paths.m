@@ -7,7 +7,7 @@ P_split = strsplit(P, ":");
 disp("Adding paths of libfranka/MATLAB folder ...")
 for i=1:numel(P_split)
     curr_path = P_split{i};
-    if contains(curr_path, 'archive') || isempty(curr_path)
+    if contains(curr_path, 'archive') || isempty(curr_path) ||contains(curr_path, ".git")
         continue
     else
         disp(string(curr_path))

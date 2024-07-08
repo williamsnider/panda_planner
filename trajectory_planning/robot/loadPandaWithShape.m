@@ -6,32 +6,7 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
 % (e.g. link0.stl) which is utilized by ManipulatorRRTSphere to check if
 % the manipuatlor is within a sphere (i.e. not colliding with the shelves).
 
-    %% Create stl of the held shape as a cylinder
-    cylinderRadius = params.cylinderRadius;
-    cylinderLength = params.cylinderLength;
 
-    % Construct cylinder points
-    numPoints = 20;
-    th = linspace(0, 2*pi, numPoints+1);
-    xc = repmat(cylinderRadius*cos(th),[2,1]);
-    yc = repmat(cylinderRadius*sin(th),[2,1]);
-    zc = zeros(size(xc));
-    zc(2,:) = cylinderLength;
-
-    % Convert cylindrical coordinates to vertices and faces
-    vertices = [xc(:), yc(:), zc(:)];
-    faces = convhull(xc(:), yc(:), zc(:));
-    
-    % Shift cylinder so that joint position is inside the cylidner
-    vertices(:,3) = vertices(:,3) - cylinderLength;
-   
-    triObj = triangulation(faces, vertices);
-    
-    % Save the mesh as an STL file
-    for i = 1:5
-    stlFileName = strcat(fileparts(mfilename('fullpath')),'/panda_description/cylinder',num2str(i),'.stl');
-    stlwrite(triObj, stlFileName);
-    end
 
     %% Generate points in case anything was updated
     run generate_collision_point_lists.m
@@ -43,6 +18,70 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
     urdf_ec = strcat(fileparts(mfilename('fullpath')),'/panda_description/panda_ec.urdf');
     panda_ec = importrobot(urdf_ec, 'DataFormat', 'row' );
     
+    %% Attach quartet as shape
+    cylinderLength = params.cylinderLength;
+    cylinderRadius = params.cylinderRadius;
+    cylinderSpacing = 0.075; % (linear array)
+    num_bodies = 4; % quartet
+
+     % Calculate the offset in the x-direction for each cylinder
+    yOffsets = (1:num_bodies)*cylinderSpacing;
+    yOffsets = yOffsets - (yOffsets(1) + yOffsets(end)) /2;
+    
+    for i = 1:num_bodies
+        yOffset = yOffsets(i);  % Center cylinder at 0 offset
+    
+        % Define the joint that connects the cylinder to the hand
+        joint = rigidBodyJoint(['joint_', num2str(i)], 'fixed');
+        setFixedTransform(joint, trvec2tform([0, yOffset, params.hand_to_tcp + cylinderLength]));  % Offset position
+    
+        % Create the cylinder body
+        body_name = ['panda_cylinder', num2str(i)];
+%         body_names{end+1} = body_name;
+        body = rigidBody(body_name);
+        body.Joint = joint;
+    
+        % Add visual mesh to the body
+        stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
+        addVisual(body, 'Mesh', stlFileName);
+    
+        % Add collision mesh to the body
+        collisionBody = collisionCylinder(cylinderRadius, cylinderLength);
+        collisionBody.Pose(3,4) = collisionBody.Pose(3,4) - cylinderLength/2; % have far end of collision body align with the interaction point
+        addCollision(body, collisionBody);
+    
+        % Attach to the robot tree
+        addBody(panda_sc, body, 'panda_hand');
+        addBody(panda_ec, body, 'panda_hand');
+    end
+
+    %% Attach single cylinder as shape
+%     cylinderRadius = params.cylinderRadius;
+%     cylinderLength = params.cylinderLength;
+% 
+%     % Construct cylinder points
+%     numPoints = 20;
+%     th = linspace(0, 2*pi, numPoints+1);
+%     xc = repmat(cylinderRadius*cos(th),[2,1]);
+%     yc = repmat(cylinderRadius*sin(th),[2,1]);
+%     zc = zeros(size(xc));
+%     zc(2,:) = cylinderLength;
+% 
+%     % Convert cylindrical coordinates to vertices and faces
+%     vertices = [xc(:), yc(:), zc(:)];
+%     faces = convhull(xc(:), yc(:), zc(:));
+%     
+%     % Shift cylinder so that joint position is inside the cylidner
+%     vertices(:,3) = vertices(:,3) - cylinderLength;
+%    
+%     triObj = triangulation(faces, vertices);
+%     
+%     % Save the mesh as an STL file
+%     for i = 1:5
+%     stlFileName = strcat(fileparts(mfilename('fullpath')),'/panda_description/cylinder',num2str(i),'.stl');
+%     stlwrite(triObj, stlFileName);
+%     end
+
 %     disp("WARNING: Panda does not have a shape attached by default.")
 %     %% Assign collision and visual meshes for shape
 %     % prevents collisions between grasped shape and world
@@ -74,6 +113,7 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
 %     addBody(panda_ec,shapeBody,"panda_hand");   
 
     %% Assign collision and visual meshes for shape
+
 
 
 end
