@@ -10,7 +10,7 @@ function [q, solnInfo] = find_q_from_T(panda_sc, body_name,T, ik, initialGuess)
                     break
                 end
 
-                if  (strcmp(solnInfo.Status, "success")) && (~checkCollision(panda_sc, q))
+                if  (strcmp(solnInfo.Status, "success")) && (~is_robot_in_self_collision_ignore_pairs(panda_sc, q))
                     break
                 
                 else

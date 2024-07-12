@@ -2,22 +2,17 @@ function planned_path = joint_plan_path(robot_ec, robot_sc, env, start, goal, pa
 %JOINT_PLAN_PATHS Summary of this function goes here
 %   Detailed explanation goes here
 %% Create collision validator
-ss = ManipulatorStateSpaceSphere(robot_ec, robot_sc);
-radius_offset = params.radius_offset;  % Makes the sphere slightly more conservative to improve robustness
-sv = ManipulatorStateValidatorSphere(ss, env, params.validationDistance, radius_offset, params);
-sv.IgnoreSelfCollision = false;
-sv.Environment = env;
+sv = construct_state_validator(robot_ec, robot_sc, env, params);
 
 % Test start and goal position
 assert(sv.isStateValid(start), "Starting joint position is invalid, probably outside the spherical region.")
+% plotJointMotion(robot_sc, start, env, params)
 assert(sv.isStateValid(goal), "Goal joint position is invalid, probably outside the spherical region.")
+% plotJointMotion(robot_sc, goal, env, params)
 
 
 % Create simple linear path
-planned_path = [start;goal];
-
-IsDirectValid = sv.isMotionValid(start, goal);
-
+[planned_path, IsDirectValid] = check_direct_path(sv, start, goal);
 
 %% Plan path using RRT
 if IsDirectValid == false

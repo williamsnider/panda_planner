@@ -17,5 +17,8 @@ trajectory_planning/assemblies/*.mat
 
 trajectory_planning/robot/collision_mesh_points.mat
 
+trajectory_planning/quartets/*.mat
+
 archive/collision*
 archive/kinematics*
+

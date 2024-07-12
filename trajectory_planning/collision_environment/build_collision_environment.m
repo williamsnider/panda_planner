@@ -81,21 +81,28 @@ box.Pose = T;
 collision_objects{end+1} = box;
 
 %% Monkey reaching box
-box_dims_m = [0.3, 0.1, 0.1];
-box_trans_m = [-0.72,0.10, 0.53];
+box_dims_m = [0.06, 0.06, 0.1];
+box_trans_m = [-0.67, 0.06, 0.6477] + [0.01, 0.0, 0.05+0.1/2];
 box = collisionBox(box_dims_m(1), box_dims_m(2), box_dims_m(3));
 T = trvec2tform(box_trans_m);
 box.Pose = T;
 collision_objects{end+1} = box;
 
+%% Monkey reaching port
+box_dims_m = [0.2, 0.06, 0.15];
+box_trans_m = box_trans_m - [0.15,0.0,0.025];
+box = collisionBox(box_dims_m(1), box_dims_m(2), box_dims_m(3));
+T = trvec2tform(box_trans_m);
+box.Pose = T;
+collision_objects{end+1} = box;
 
-% %% Monkey chair
-% chair_dims_m = [0.01, 1.0, 1.0];
-% chair_trans_m = [-0.7, 0, 0.2];
-% box = collisionBox(chair_dims_m(1), chair_dims_m(2), chair_dims_m(3));
-% T = trvec2tform(chair_trans_m);
-% box.Pose = T;
-% collision_objects{end+1} = box;
+%% Monkey chair
+chair_dims_m = [0.01, 1.0, 1.0];
+chair_trans_m = [-0.88, 0, 0.2];
+box = collisionBox(chair_dims_m(1), chair_dims_m(2), chair_dims_m(3));
+T = trvec2tform(chair_trans_m);
+box.Pose = T;
+collision_objects{end+1} = box;
 
 
 %% Return environment

@@ -39,8 +39,8 @@ classdef CustomParameters
  
  
  % Model held shapes as cylinders
- cylinderRadius = 0.025;  % Length of the cylinder
- cylinderLength = 0.05;  % Radius of the cylinder
+ cylinderRadius = 0.0225;  
+ cylinderLength = 0.08; 
  %
  %  monkeyXYZ = [-0.62 -0.0 0.40]; % from Neo's perspective +X: towards far wall, +Y: towards left, +Z: towards ceiling
  %  pullXYZ = [-0.62 -0.125 0.40];
@@ -64,10 +64,10 @@ classdef CustomParameters
  % be planned here. It is important to keep an additional collision object
  % representing the monkey's arm reaching port to avoid colliding with
  % that. That should be placed in build_collision_environment.m
-staging_box_width = 0.2; 
+staging_box_width = 0.32; 
 staging_box_height = 0.7; 
 staging_box_length = 1.0; 
-staging_box_center = [-0.72, 0.0, 0.325]; % Replace with the desired center coordinates [x, y, z]
+staging_box_center = [-0.72, 0.0, 0.525]; % Replace with the desired center coordinates [x, y, z]
             
 
 
