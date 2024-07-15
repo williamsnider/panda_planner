@@ -64,10 +64,10 @@ classdef CustomParameters
  % be planned here. It is important to keep an additional collision object
  % representing the monkey's arm reaching port to avoid colliding with
  % that. That should be placed in build_collision_environment.m
-staging_box_width = 0.32; 
-staging_box_height = 0.7; 
-staging_box_length = 1.0; 
-staging_box_center = [-0.72, 0.0, 0.525]; % Replace with the desired center coordinates [x, y, z]
+staging_box_width = 0.42; 
+staging_box_height = 1.2; 
+staging_box_length = 0.85; 
+staging_box_center = [-0.67, -0.05, 0.375]; % Replace with the desired center coordinates [x, y, z]
             
 
 

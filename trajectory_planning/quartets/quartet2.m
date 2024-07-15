@@ -15,6 +15,12 @@ RandStream.setGlobalStream(stream);
 [panda_ec_W, panda_sc_W] = loadPandaWithShape(params);
 env = build_collision_environment;
 
+% Plot panda
+plotJointMotion(panda_sc_orig, randomConfiguration(panda_sc_orig), env, params);
+hold on;
+xyz = params.shelf_pts;
+plot3(xyz(:,1), xyz(:,2), xyz(:,3), 'r*')
+
 % Reduce joint limits
 JOINT_REDUCTION = 0.3;
 J7_REDUCTION = 0.2;
@@ -208,11 +214,9 @@ for body_num = 1:numel(body_names)
 end
 
 % % Sanity check:
-% plotJointMotion(panda_sc_A, qA_arr(17,:), env, params); hold on;
-% show(panda_sc_A, qA_arr(18,:))
-% 
-% plotJointMotion(panda_sc_W, qW_arr(17,:), env, params); hold on;
-% show(panda_sc_W, qW_arr(18,:))
+% plotJointMotion(panda_sc_A, qA_arr(1,:), env, params); hold on;
+% show(panda_sc_A, qA_arr(1,:))
+% show(panda_sc_W, qW_arr(1,:))
 
 
 arr = qW_arr;
@@ -244,23 +248,28 @@ end
 
 
 % Calculate staging to inter
-cell_staging_to_inter = {};
+cell_staging_to_inter_70 = {};
+cell_staging_to_inter_path = {};
+
 for i = 1:num_positions
 
     start = arr(i,:);
     goal = inter(i,:);
 
     [traj, planned_path] = planJointToJoint(panda_ec_orig, panda_sc_orig, env, start, goal, params);
-    cell_staging_to_inter{end+1} = {traj, planned_path};
+    cell_staging_to_inter_70{end+1} = traj;
+    cell_staging_to_inter_path{end+1} = planned_path;
 
     disp(size(traj))
     disp(size(planned_path))
 end
-save("cell_staging_to_inter.mat","cell_staging_to_inter")
+save("cell_staging_to_inter_70.mat","cell_staging_to_inter_70")
+save("cell_staging_to_inter_path.mat","cell_staging_to_inter_path")
 
 
 % Calculating inter to inter
-cell_inter_to_inter = cell(num_positions, num_positions);
+cell_inter_to_inter_70 = cell(num_positions, num_positions);
+cell_inter_to_inter_path = cell(num_positions, num_positions);
 
 parfor r=1:num_positions
     for c = 1:num_positions
@@ -273,79 +282,197 @@ parfor r=1:num_positions
     goal = inter(c,:);
     [traj, planned_path] = planJointToJoint(panda_ec_orig, panda_sc_orig, env, start, goal, params);
 %     plotJointMotion(panda_sc_orig, traj, env, params)
-    cell_inter_to_inter{r,c} = {traj, planned_path};
+    cell_inter_to_inter_70{r,c} = traj;
+    cell_inter_to_inter_path{r,c} = planned_path;
+    end
+end
 
+
+%% Mirror inter_to_inter array by flipping paths and trajectories
+for i = 1:num_positions
+    for j = i:num_positions
+        if i==j
+            continue
+        end
+
+        % Insert into array
+        cell_inter_to_inter_70{j,i}= flip(cell_inter_to_inter_70{i,j},1);
+        cell_inter_to_inter_path{j,i}= flip(cell_inter_to_inter_path{i,j},1);
+    end
+end
+
+save("cell_inter_to_inter_70.mat","cell_inter_to_inter_70")
+save("cell_inter_to_inter_path.mat","cell_inter_to_inter_path")
+
+
+
+%% Substitute short for multi-segment to prevent same motions from being obvious
+seedval = 123;  % Adjust this until the distributions for same/different are similarly shaped
+stream = RandStream('mt19937ar', 'Seed', seedval);
+RandStream.setGlobalStream(stream);
+
+new_traj = cell_inter_to_inter_70;
+new_path = cell_inter_to_inter_path;
+
+target_min = 2500;
+target_max = 4000;
+for r = 1:num_positions
+    for c = r:num_positions
+
+        if r ==c 
+            continue
+        end
+
+
+        traj = cell_inter_to_inter_70{r,c};
+        traj_length = size(traj,1);
+        
+        planned_path = cell_inter_to_inter_path{r,c};
+        path_num = size(planned_path,1);
+
+        % Ensure minimum length AND at least 1 intermediate configuration
+        if ((traj_length>=target_min)  && (path_num>2))
+            continue
+        end
+
+        disp(strcat(num2str(r)," ", num2str(c)))
+
+
+
+        possible_seq = [];
+        for i1 = 1:32
+
+                if (i1==r) || (i1==c) 
+                    continue
+                end
+
+                seq = [r,i1,c];
+                possible_seq = [possible_seq;seq];
+        
+        end
+
+        shuffled_seq = possible_seq(randperm(size(possible_seq,1)),:);
+
+        found_seq = false;
+        for seq_num = 1:size(shuffled_seq)
+
+            seq = shuffled_seq(seq_num,:);
+            seq = seq(seq>0);  % Remove zero idx; shortens to just 1 intermediate
+
+            seq_length = 0;
+            seq_path = [];
+            seq_traj = [];
+            for idx_a = 1:(numel(seq)-1)
+                idx_b= idx_a+1;
+
+                seq_a = seq(idx_a);
+                seq_b = seq(idx_b);
+
+                sub_path = cell_inter_to_inter_path{seq_a, seq_b};
+                if idx_a == 1
+                    seq_path = [seq_path; sub_path];
+                else
+                    seq_path = [seq_path;sub_path(2:end,:)];
+                end
+
+                traj = cell_inter_to_inter_70{seq_a, seq_b};
+                seq_traj = [seq_traj;traj];
+
+                sub_length = size(traj,1);
+                seq_length = seq_length + sub_length;
+            end
+
+
+
+            if (target_min < seq_length) && (target_max > seq_length)
+
+                % Insert new path
+                new_path{r,c} = seq_path;
+                new_path{c,r} = flip(seq_path,1);
+
+                % Insert new traj
+                new_traj{r,c} = seq_traj;
+                new_traj{c,r} = flip(seq_traj,1);
+                
+                % Exit loop
+                found_seq=true;
+                break
+            end
+
+
+        end
+        if ~found_seq
+                disp(strcat("Failed for ",num2str(r)," ", num2str(c)))
+        end
+
+    end
+end
+
+traj_lengths = zeros(size(new_traj));
+for r = 1:num_positions
+    for c = 1:num_positions
+        traj_lengths(r,c) = size(new_traj{r,c},1);
+    end
+end
+
+histogram(traj_lengths(:), 'BinEdges', 100:250:5000, 'FaceColor', 'blue');
+hold on;
+traj_lengths_same = diag(traj_lengths,1);
+traj_lengths_same = traj_lengths_same(1:2:end);
+histogram(traj_lengths_same, 'BinEdges', 100:250:5000, 'FaceColor', 'red');
+
+%% Convert to full path
+
+
+cell_full_70 = cell(num_positions, num_positions);
+cell_full_path = cell(num_positions, num_positions);
+
+for r=1:num_positions
+    for c = 1:num_positions
+
+    if r==c
+        continue
+    end
+    
+    % Combine
+    full_traj = [cell_staging_to_inter_70{r}; new_traj{r,c}; flip(cell_staging_to_inter_70{r},1)];
+    cell_full_70{r,c} = full_traj;
+    
+    full_path = [cell_staging_to_inter_path{r}; new_traj{r,c}; flip(cell_staging_to_inter_path{r},1)];
+    cell_full_path{r,c} = full_path;
     
     end
 end
-save("cell_inter_to_inter.mat","cell_inter_to_inter")
 
-traj_lengths = [];
-for i = 1:numel(cell_inter_to_inter)
 
-    subcell = cell_inter_to_inter{i};
 
-    if numel(subcell) == 0
-        continue
-    end
 
-    traj = subcell{1};
-    planned_path = subcell{2};
 
-    traj_length = size(traj,1);
-    traj_lengths = [traj_lengths;traj_length];
-
-%     if traj_length > 5000
-%         break
+% traj_lengths = [];
+% for i = 1:numel(cell_inter_to_inter)
+% 
+%     subcell = cell_inter_to_inter{i};
+% 
+%     if numel(subcell) == 0
+%         continue
 %     end
+% 
+%     traj = subcell{1};
+%     planned_path = subcell{2};
+% 
+%     traj_length = size(traj,1);
+%     traj_lengths = [traj_lengths;traj_length];
+% 
+% end
+% 
+% hist(traj_lengths, 50)
+% plotJointMotion(panda_sc_W, traj, env, params)
+% hold on;
+% show(panda_sc_W, planned_path(2,:));
+% show(panda_sc_W, planned_path(3,:));
 
-end
-
-hist(traj_lengths, 50)
-plotJointMotion(panda_sc_W, traj, env, params)
-% Why are some paths taking 6 seconds
 
 
-
-%% Identify any random configurations that work with all inter
-rand_configs = [];
-sv = construct_state_validator(panda_ec_orig, panda_sc_orig, env, params)
-count = 0;
-while true
-    count = count+1;
-    if mod(count, 100)==0
-        disp(count)
-    end
-    q_random = randomConfiguration(panda_sc_orig);
-    q_random(8:9) = 0.01;
-
-    % Test if in self collision
-    if is_robot_in_self_collision_ignore_pairs(panda_sc_orig, q_random)
-        continue
-    end
-
-    % Test if in environmental collision
-    if ~sv.isStateValid(q_random)
-        continue
-    end
-
-    % Test if direct path possible
-    start = q_random;
-    all_valid = true;
-    for i = 1:num_positions
-        goal = inter(i,:);
-        [planned_path, isDirectValid] = check_direct_path(sv, start, goal);
-        if ~isDirectValid
-            all_valid = false;
-            break
-        end
-    end
-
-    if all_valid
-        rand_configs = [rand_configs; q_random]
-    end
-
-end
 
 
 
