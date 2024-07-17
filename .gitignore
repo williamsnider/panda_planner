@@ -21,6 +21,7 @@ trajectory_planning/quartets/*.mat
 trajectory_planning/quartets/trajectories/*.csv
 trajectory_planning/quartets/trajectories/*.mat
 trajectory_planning/quartets/*.txt
+trajectory_planning/quartets/trajectories/
 
 archive/collision*
 archive/kinematics*

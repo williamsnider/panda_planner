@@ -223,33 +223,37 @@ end
 
 
 %% Calculate staging_to_inter and inter_to_inter paths/trajectories
-savedir = '/home/williamsnider/Code/panda_planner/trajectory_planning/quartets/trajectories/';
-prefix = "20240716";
+savedir = strcat(params.CustomParametersDir,'/trajectory_planning/quartets/trajectories/');
+mkdir(savedir)
+prefix = "20240717";
 
 arr = qW_arr;
 inter_shift = zeros(4);
 inter_shift(1,4) = 0.05;  % Positive x direction, towards base
-[cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_staging_paths(arr,inter_shift,panda_ec_orig, panda_sc_orig, ik_orig, env, params, prefix)
+[cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_staging_paths(arr,inter_shift,panda_ec_orig, panda_sc_orig, ik_orig, env, params);
 
 % Save initially calculated trajectories and paths
-name = "qW";
-save(strcat(savedir,"cell_qW_staging_to_inter_70.mat"),"cell_staging_to_inter_70")
-save(strcat(savedir,"cell_qW_staging_to_inter_path.mat"),"cell_staging_to_inter_path")
-save(strcat(savedir,"cell_qW_inter_to_inter_70.mat"),"cell_inter_to_inter_70")
-save(strcat(savedir,"cell_qW_inter_to_inter_path.mat"),"cell_inter_to_inter_path")
+qW = struct();
+qW.cell_staging_to_inter_70 = cell_staging_to_inter_70;
+qW.cell_staging_to_inter_path = cell_staging_to_inter_path;
+qW.cell_inter_to_inter_70 = cell_inter_to_inter_70;
+qW.cell_inter_to_inter_path = cell_inter_to_inter_path;
+
+% Save the struct to a single .mat file
+save(strcat(savedir, prefix,"_qW.mat"), "qW");
 
 
-%% Substitute short paths
+%% Substitute short paths - find seedval that has similar distributions of same and different motions
+seedval = 123;
 target_min = 2500;
 target_max = 4000;
-[new_traj,new_path] = calc_substituted_paths(seedval, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max);
-
-%% Convert to full path
+[cell_inter_to_inter_sub_70,cell_inter_to_inter_sub_path] = calc_substituted_paths(seedval, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max);
 
 
+%% Convert to full path - piece together staging_to_inter, inter_to_inter, and inter_to_staging
+num_positions = size(cell_inter_to_inter_path, 1);
 cell_full_70 = cell(num_positions, num_positions);
 cell_full_path = cell(num_positions, num_positions);
-
 for r=1:num_positions
     for c = 1:num_positions
 
@@ -258,10 +262,10 @@ for r=1:num_positions
         end
 
         % Combine
-        full_traj = [cell_staging_to_inter_70{r}; new_traj{r,c}; flip(cell_staging_to_inter_70{c},1)];
+        full_traj = [cell_staging_to_inter_70{r}; cell_inter_to_inter_sub_70{r,c}; flip(cell_staging_to_inter_70{c},1)];
         cell_full_70{r,c} = full_traj;
 
-        full_path = [cell_staging_to_inter_path{r}; new_traj{r,c}; flip(cell_staging_to_inter_path{c},1)];
+        full_path = [cell_staging_to_inter_path{r}; cell_inter_to_inter_sub_path{r,c}; flip(cell_staging_to_inter_path{c},1)];
         cell_full_path{r,c} = full_path;
 
     end
