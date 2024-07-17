@@ -13,8 +13,8 @@ function has_environment_collisions = checkTrajForEnvironmentCollisions(sv,traj,
 
         if ~sv.isStateValid(traj(timestep,:))
 %             show(panda_sc, traj(timestep,:)); hold on;
-%             plotJointMotion(panda_sc, traj(timestep,:), env, params);
-%             disp(timestep)
+            plotJointMotion(sv.Robot_sc, traj(timestep,:), sv.Environment, params);
+            disp(timestep)
             has_environment_collisions = true;
             break
         end

@@ -9,7 +9,7 @@ all_trajectory = joint_path_to_traj(planned_path, params);
 
 
 %% Check
-assert(checkTrajectory(all_trajectory, start, goal, params));
+assert(checkTrajKinematics(all_trajectory, start, goal, params));
 
 end
 

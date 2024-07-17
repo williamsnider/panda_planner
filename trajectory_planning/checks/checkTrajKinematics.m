@@ -1,4 +1,4 @@
-function valid = checkTrajectory(allJointTrajectories,s0All, s1All, params)
+function valid = checkTrajKinematics(allJointTrajectories,s0All, s1All, params)
 %CHECKTRAJECTORY Checks if a joint trajectory respects position, velocity,
 %acceleration, and jerk constraints.
 
