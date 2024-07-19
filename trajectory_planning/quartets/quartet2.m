@@ -218,36 +218,59 @@ end
 % show(panda_sc_A, qA_arr(1,:))
 % show(panda_sc_W, qW_arr(1,:))
 
+%% Inputs for qA vs qW
 
+% Position names
+% staging_letters = 
+staging_letters = ["A","B","C","D"]; % ["W","X","Y","Z"];
 
+% q array to use
+varName = 'qA';
+eval(['q_arr = ',varName,'_arr;'])
+inter_shift = zeros(4);
+% inter_shift(1,4) = 0.05;  % Positive x direction, towards base
+inter_shift(3,4) = -0.05; % Down, towards floor
 
-
-%% Calculate staging_to_inter and inter_to_inter paths/trajectories
+% Where to save
 savedir = strcat(params.CustomParametersDir,'/trajectory_planning/quartets/trajectories/');
 mkdir(savedir)
 prefix = "20240717";
 
-arr = qW_arr;
-inter_shift = zeros(4);
-inter_shift(1,4) = 0.05;  % Positive x direction, towards base
-[cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_staging_paths(arr,inter_shift,panda_ec_orig, panda_sc_orig, ik_orig, env, params);
+% Seed rng for substituting short paths for reproducibility
 
-% Save initially calculated trajectories and paths
-qW = struct();
-qW.cell_staging_to_inter_70 = cell_staging_to_inter_70;
-qW.cell_staging_to_inter_path = cell_staging_to_inter_path;
-qW.cell_inter_to_inter_70 = cell_inter_to_inter_70;
-qW.cell_inter_to_inter_path = cell_inter_to_inter_path;
+%% Aggregate names of positions
+pos_names = {};
+staging_numbers = ["0","1","2","3"];
+staging_alternates = ["a","b"];
 
-% Save the struct to a single .mat file
-save(strcat(savedir, prefix,"_qW.mat"), "qW");
+for letter_num = 1:numel(staging_letters)
+    for number_num = 1:numel(staging_numbers)
+        for alternate_num = 1:numel(staging_alternates)
+
+            staging_letter = staging_letters(letter_num);
+            staging_number = staging_numbers(number_num);
+            staging_alternate = staging_alternates(alternate_num);
+
+            pos_name = strcat(staging_letter, staging_number, staging_alternate);
+            pos_names{end+1} = pos_name;
+        end
+    end
+end
+
+%% Calculate staging_to_inter and inter_to_inter paths/trajectories
+[cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_staging_paths(q_arr,inter_shift,panda_ec_orig, panda_sc_orig, ik_orig, env, params);
+
+
 
 
 %% Substitute short paths - find seedval that has similar distributions of same and different motions
-seedval = 123;
-target_min = 2500;
+% seedval_sub_short_paths = 123; % qW
+% target_min = 2500;
+% target_max = 4000;
+seedval_sub_short_paths = 127; % qA
+target_min = 2000;
 target_max = 4000;
-[cell_inter_to_inter_sub_70,cell_inter_to_inter_sub_path] = calc_substituted_paths(seedval, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max);
+[cell_inter_to_inter_sub_70,cell_inter_to_inter_sub_path] = calc_substituted_paths(seedval_sub_short_paths, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max);
 
 
 %% Convert to full path - piece together staging_to_inter, inter_to_inter, and inter_to_staging
@@ -271,6 +294,10 @@ for r=1:num_positions
     end
 end
 
+
+
+
+
 %% Check full trajectories
 sv = construct_state_validator(panda_ec_orig, panda_sc_orig, env, params);
 for r = 1:num_positions
@@ -284,61 +311,107 @@ for r = 1:num_positions
         traj = cell_full_70{r,c};
 
         % Check kinematics and start/stop
-        assert(checkTrajKinematics(traj,qW_arr(r,:), qW_arr(c,:), params))
+        assert(checkTrajKinematics(traj,q_arr(r,:), q_arr(c,:), params))
 
         % Check no self collisions
         assert(~checkTrajForSelfCollisions(panda_sc_orig, traj, params));
     end
 end
 
-%% Aggregate names of positions
-pos_names = {};
-staging_letters = ["W","X","Y","Z"];
-staging_numbers = ["0","1","2","3"];
-staging_alternates = ["a","b"];
-
-for letter_num = 1:numel(staging_letters)
-    for number_num = 1:numel(staging_numbers)
-        for alternate_num = 1:numel(staging_alternates)
-
-            staging_letter = staging_letters(letter_num);
-            staging_number = staging_numbers(number_num);
-            staging_alternate = staging_alternates(alternate_num);
-            
-            pos_name = strcat(staging_letter, staging_number, staging_alternate);
-            pos_names{end+1} = pos_name;
+%% Calculate trajectories for 10% and 40% speed
+cell_full_10 = cell(size(cell_full_70));
+cell_full_40 = cell(size(cell_full_70));
+for r = 1:num_positions
+    for c=1:num_positions
+        if c<=r
+            continue
         end
+
+        disp([r,c])
+        % Load planned path
+        planned_path = cell_full_path{r,c};
+
+        % Calculate trajectories - 10%
+        params_copy = params;
+        params_copy.vScale = 0.1;
+        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        traj = joint_path_to_traj(planned_path, params_copy);
+        assert(checkTrajKinematics(traj, planned_path(1,:), planned_path(end,:), params_copy)); % Check
+        assert(~checkTrajForSelfCollisions(panda_sc_orig, traj, params));
+        traj_reverse = flip(traj,1);
+        assert(checkTrajKinematics(traj_reverse, planned_path(end,:), planned_path(1,:), params_copy)); % Check
+        cell_full_10{r,c} = traj;
+        cell_full_10{c,r} = traj_reverse;
+
+        % Calculate trajectories - 40%
+        params_copy = params;
+        params_copy.vScale = 0.4;
+        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        traj = joint_path_to_traj(planned_path, params_copy);
+        assert(checkTrajKinematics(traj, planned_path(1,:), planned_path(end,:), params_copy)); % Check
+        assert(~checkTrajForSelfCollisions(panda_sc_orig, traj, params));
+        traj_reverse = flip(traj,1);
+        assert(checkTrajKinematics(traj_reverse, planned_path(end,:), planned_path(1,:), params_copy)); % Check
+        cell_full_40{r,c} = traj;
+        cell_full_40{c,r} = traj_reverse;
     end
 end
 
+%% Save mat files
 
+% Dynamically create struct, populate
+eval([varName ' = struct();']);
+eval([varName, '.cell_staging_to_inter_70 = cell_staging_to_inter_70'])
+eval([varName, '.cell_staging_to_inter_path = cell_staging_to_inter_path'])
+eval([varName, '.cell_inter_to_inter_70 = cell_inter_to_inter_70'])
+eval([varName, '.cell_inter_to_inter_path = cell_inter_to_inter_path'])
+eval([varName, '.cell_full_10 = cell_full_10'])
+eval([varName, '.cell_full_40 = cell_full_40'])
+eval([varName, '.cell_full_70 = cell_full_70'])
+eval([varName, '.cell_full_path = cell_full_path'])
+
+% Save the struct to a single .mat file
+save(strcat(savedir, prefix,"_",varName,".mat"), varName);
 
 %% Save Trajectories
-r = 1;
-c = 5;
-speed_factor = 70;
-traj = cell_full_70{r,c};
-traj7 = traj(:,1:7);
-n1 = pos_names{r};
-n2 = pos_names{c};
-
 mkdir(savedir);
 addpath(savedir);
-fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
-writematrix(traj7,fname)
 
 
+for r = 1:num_positions
+    for c = 1:num_positions
 
-%% Plot examples
-r = 23;
-c = 1;
+        if r==c
+            continue
+        end
 
-while true
-    traj = cell_full_70{r,c};
-    plotJointMotion(panda_sc_orig, traj, env, params);
+        disp([r,c])
 
-    traj = cell_full_70{c,r};
-    plotJointMotion(panda_sc_orig, traj, env, params);
+        speed_factor = 10;
+        traj = cell_full_10{r,c};
+        traj7 = traj(:,1:7);
+        n1 = pos_names{r};
+        n2 = pos_names{c};
+        fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
+        writematrix(traj7,fname)
 
+        speed_factor = 40;
+        traj = cell_full_40{r,c};
+        traj7 = traj(:,1:7);
+        n1 = pos_names{r};
+        n2 = pos_names{c};
+        fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
+        writematrix(traj7,fname)
+
+
+        speed_factor = 70;
+        traj = cell_full_70{r,c};
+        traj7 = traj(:,1:7);
+        n1 = pos_names{r};
+        n2 = pos_names{c};
+        fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
+        writematrix(traj7,fname)
+
+    end
 end
 

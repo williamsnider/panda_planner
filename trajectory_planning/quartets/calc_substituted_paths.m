@@ -10,8 +10,6 @@ new_traj = cell_inter_to_inter_70;
 new_path = cell_inter_to_inter_path;
 num_positions = size(cell_inter_to_inter_path,1);
 
-
-
 for r = 1:num_positions
     for c = r:num_positions
 
@@ -47,8 +45,13 @@ for r = 1:num_positions
 
         end
 
-        shuffled_seq = possible_seq(randperm(size(possible_seq,1)),:);
+        % Alternate between top and bottom half of range to ensure
+        % better spread of lengths
+        target_mid = (target_max+target_min)/2;
+        target_randi = randi(2);
 
+
+        shuffled_seq = possible_seq(randperm(size(possible_seq,1)),:);
         found_seq = false;
         for seq_num = 1:size(shuffled_seq)
 
@@ -80,7 +83,8 @@ for r = 1:num_positions
 
 
 
-            if (target_min < seq_length) && (target_max > seq_length)
+
+            if ((target_randi==1) && (target_min < seq_length) && (target_mid > seq_length)) || ((target_randi==2) && (target_mid < seq_length) && (target_max > seq_length))
 
                 % Insert new path
                 new_path{r,c} = seq_path;
@@ -111,10 +115,10 @@ for r = 1:num_positions
     end
 end
 
-histogram(traj_lengths(:), 'BinEdges', 100:250:5000, 'FaceColor', 'blue');
+histogram(traj_lengths(:), 'BinEdges', 250:250:5000, 'FaceColor', 'blue');
 hold on;
 traj_lengths_same = diag(traj_lengths,1);
 traj_lengths_same = traj_lengths_same(1:2:end);
-histogram(traj_lengths_same, 'BinEdges', 100:250:5000, 'FaceColor', 'red');
+histogram(traj_lengths_same, 'BinEdges', 250:250:5000, 'FaceColor', 'red');
 end
 
