@@ -312,6 +312,32 @@ for letter_num = 1:numel(staging_letters)
 end
 
 
+%% Create 10 and 40 speed trajectories
+cell_full_10 = cell(size(cell_full_70));
+cell_full_40 = cell(size(cell_full_70));
+for r = 1:num_positions
+    for c=1:num_positions
+        if r==c
+            continue
+        end
+
+        disp([r,c])
+        % Load traj
+        planned_path = cell_full_path{r,c};
+
+        % Convert path to traj
+        params_copy.vScale = 0.1;
+        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
+        traj = joint_path_to_traj(planned_path, params_copy);
+
+        % Check kinematics and start/stop
+        assert(checkTrajKinematics(traj,qW_arr(r,:), qW_arr(c,:), params))
+
+        % Check no self collisions
+        assert(~checkTrajForSelfCollisions(panda_sc_orig, traj, params));
+    end
+end
+
 
 %% Save Trajectories
 r = 1;
@@ -328,17 +354,4 @@ fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(s
 writematrix(traj7,fname)
 
 
-
-%% Plot examples
-r = 23;
-c = 1;
-
-while true
-    traj = cell_full_70{r,c};
-    plotJointMotion(panda_sc_orig, traj, env, params);
-
-    traj = cell_full_70{c,r};
-    plotJointMotion(panda_sc_orig, traj, env, params);
-
-end
 
