@@ -4,7 +4,7 @@
 clear; close all;
 addpath("..")
 params = CustomParameters();
-[panda_ec, panda_sc] = loadPandaWithShape();
+[panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
 SAVE_DIR = "trajectories/20240423_";
 

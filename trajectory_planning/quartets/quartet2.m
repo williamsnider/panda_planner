@@ -221,41 +221,35 @@ end
 %% Inputs for qA vs qW
 
 % Position names
-% staging_letters = 
-staging_letters = ["A","B","C","D"]; % ["W","X","Y","Z"];
+staging_letters = ["W","X","Y","Z"];
 
 % q array to use
-varName = 'qA';
+varName = 'qW';
 eval(['q_arr = ',varName,'_arr;'])
 inter_shift = zeros(4);
+inter_shift(1,4) = 0.05;  % Positive x direction, towards base
+
+
+% % Position names
+% % staging_letters = 
+% staging_letters = ["A","B","C","D"]; % ["W","X","Y","Z"];
+% 
+% % q array to use
+% varName = 'qA';
+% eval(['q_arr = ',varName,'_arr;'])
+% inter_shift = zeros(4);
 % inter_shift(1,4) = 0.05;  % Positive x direction, towards base
-inter_shift(3,4) = -0.05; % Down, towards floor
+% inter_shift(3,4) = -0.05; % Down, towards floor
 
 % Where to save
 savedir = strcat(params.CustomParametersDir,'/trajectory_planning/quartets/trajectories/');
 mkdir(savedir)
-prefix = "20240717";
+prefix = "20240722";
 
 % Seed rng for substituting short paths for reproducibility
 
 %% Aggregate names of positions
-pos_names = {};
-staging_numbers = ["0","1","2","3"];
-staging_alternates = ["a","b"];
 
-for letter_num = 1:numel(staging_letters)
-    for number_num = 1:numel(staging_numbers)
-        for alternate_num = 1:numel(staging_alternates)
-
-            staging_letter = staging_letters(letter_num);
-            staging_number = staging_numbers(number_num);
-            staging_alternate = staging_alternates(alternate_num);
-
-            pos_name = strcat(staging_letter, staging_number, staging_alternate);
-            pos_names{end+1} = pos_name;
-        end
-    end
-end
 
 %% Calculate staging_to_inter and inter_to_inter paths/trajectories
 [cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_staging_paths(q_arr,inter_shift,panda_ec_orig, panda_sc_orig, ik_orig, env, params);
@@ -264,14 +258,16 @@ end
 
 
 %% Substitute short paths - find seedval that has similar distributions of same and different motions
-% seedval_sub_short_paths = 123; % qW
-% target_min = 2500;
-% target_max = 4000;
-seedval_sub_short_paths = 127; % qA
-target_min = 2000;
+seedval_sub_short_paths = 123; % qW
+target_min = 2250;
 target_max = 4000;
+% seedval_sub_short_paths = 127; % qA
+% target_min = 2000;
+% target_max = 4000;
 [cell_inter_to_inter_sub_70,cell_inter_to_inter_sub_path] = calc_substituted_paths(seedval_sub_short_paths, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max);
 
+plot_histogram_of_traj_lengths(cell_inter_to_inter_sub_70);
+waitforbuttonpress();
 
 %% Convert to full path - piece together staging_to_inter, inter_to_inter, and inter_to_staging
 num_positions = size(cell_inter_to_inter_path, 1);
@@ -369,6 +365,7 @@ eval([varName, '.cell_full_10 = cell_full_10'])
 eval([varName, '.cell_full_40 = cell_full_40'])
 eval([varName, '.cell_full_70 = cell_full_70'])
 eval([varName, '.cell_full_path = cell_full_path'])
+eval([varName, '.', varName, '_arr = ', varName, '_arr'])
 
 % Save the struct to a single .mat file
 save(strcat(savedir, prefix,"_",varName,".mat"), varName);
@@ -376,6 +373,8 @@ save(strcat(savedir, prefix,"_",varName,".mat"), varName);
 %% Save Trajectories
 mkdir(savedir);
 addpath(savedir);
+mkdir(strcat(savedir, varName));
+addpath(strcat(savedir, varName));
 
 
 for r = 1:num_positions
@@ -392,7 +391,7 @@ for r = 1:num_positions
         traj7 = traj(:,1:7);
         n1 = pos_names{r};
         n2 = pos_names{c};
-        fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
+        fname = strcat(savedir,varName,"/",prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
         writematrix(traj7,fname)
 
         speed_factor = 40;
@@ -400,7 +399,7 @@ for r = 1:num_positions
         traj7 = traj(:,1:7);
         n1 = pos_names{r};
         n2 = pos_names{c};
-        fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
+        fname = strcat(savedir,varName,"/",prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
         writematrix(traj7,fname)
 
 
@@ -409,21 +408,10 @@ for r = 1:num_positions
         traj7 = traj(:,1:7);
         n1 = pos_names{r};
         n2 = pos_names{c};
-        fname = strcat(savedir,prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
+        fname = strcat(savedir,varName,"/",prefix, "_staging", n1,"_to_", "staging",n2,"_",num2str(speed_factor),"%.csv");
         writematrix(traj7,fname)
 
-
-
-%% Plot examples
-r = 23;
-c = 1;
-
-while true
-    traj = cell_full_70{r,c};
-    plotJointMotion(panda_sc_orig, traj, env, params);
-
-    traj = cell_full_70{c,r};
-    plotJointMotion(panda_sc_orig, traj, env, params);
-
+    end
 end
+
 
