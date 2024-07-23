@@ -40,7 +40,7 @@ classdef CustomParameters
  
  % Model held shapes as cylinders
  cylinderRadius = 0.0225;  
- cylinderLength = 0.08; 
+ cylinderLength = 0.06; 
  %
  %  monkeyXYZ = [-0.62 -0.0 0.40]; % from Neo's perspective +X: towards far wall, +Y: towards left, +Z: towards ceiling
  %  pullXYZ = [-0.62 -0.125 0.40];

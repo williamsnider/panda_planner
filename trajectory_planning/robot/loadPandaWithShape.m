@@ -33,7 +33,8 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
     
         % Define the joint that connects the cylinder to the hand
         joint = rigidBodyJoint(['joint_', num2str(i)], 'fixed');
-        setFixedTransform(joint, trvec2tform([0, yOffset, params.hand_to_tcp + cylinderLength]));  % Offset position
+        tcp_to_base_of_stimulus = 0.0261;  % Distance between the TCP and the flat portion of each stimulus.
+        setFixedTransform(joint, trvec2tform([0, yOffset, params.hand_to_tcp + tcp_to_base_of_stimulus]));  % Offset position
     
         % Create the cylinder body
         body_name = ['panda_cylinder', num2str(i)];
@@ -41,13 +42,15 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
         body = rigidBody(body_name);
         body.Joint = joint;
     
-        % Add visual mesh to the body
+        %Add visual mesh to the body
         stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
         addVisual(body, 'Mesh', stlFileName);
     
+
+
         % Add collision mesh to the body
-        collisionBody = collisionCylinder(cylinderRadius, cylinderLength);
-        collisionBody.Pose(3,4) = collisionBody.Pose(3,4) - cylinderLength/2; % have far end of collision body align with the interaction point
+        collisionBody = collisionCylinder(cylinderRadius, 2*cylinderLength);  % Since the cylinder is centered, need 2*cylinderLength
+        collisionBody.Pose(3,4) = collisionBody.Pose(3,4); 
         addCollision(body, collisionBody);
     
         % Attach to the robot tree
