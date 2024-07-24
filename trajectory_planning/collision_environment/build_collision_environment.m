@@ -82,7 +82,7 @@ collision_objects{end+1} = box;
 
 %% Monkey reaching box
 box_dims_m = [0.06, 0.06, 0.1];
-box_trans_m = [-0.67, 0.06, 0.6477] + [0.01, 0.0, 0.05+0.1/2];
+box_trans_m = [-0.67, 0.06, 0.6477] + [0.00, 0.0, 0.025];
 box = collisionBox(box_dims_m(1), box_dims_m(2), box_dims_m(3));
 T = trvec2tform(box_trans_m);
 box.Pose = T;
@@ -90,7 +90,7 @@ collision_objects{end+1} = box;
 
 %% Monkey reaching port
 box_dims_m = [0.2, 0.06, 0.15];
-box_trans_m = box_trans_m - [0.15,0.0,0.025];
+box_trans_m = box_trans_m - [0.175,0.0,0.025];
 box = collisionBox(box_dims_m(1), box_dims_m(2), box_dims_m(3));
 T = trvec2tform(box_trans_m);
 box.Pose = T;

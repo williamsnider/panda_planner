@@ -47,8 +47,9 @@ for r = 1:num_positions
 
         % Alternate between top and bottom half of range to ensure
         % better spread of lengths
-        target_mid = (target_max+target_min)/2;
-        target_randi = randi(2);
+        target_intervals = 1;
+        target_range = linspace(target_min, target_max, target_intervals+1);
+        target_randi = randi(target_intervals);
 
 
         shuffled_seq = possible_seq(randperm(size(possible_seq,1)),:);
@@ -81,10 +82,12 @@ for r = 1:num_positions
                 seq_length = seq_length + sub_length;
             end
 
+            
+            target_interval_min = target_range(target_randi);
+            target_interval_max = target_range(target_randi+1);
 
 
-
-            if ((target_randi==1) && (target_min < seq_length) && (target_mid > seq_length)) || ((target_randi==2) && (target_mid < seq_length) && (target_max > seq_length))
+            if (target_interval_min < seq_length) && (target_interval_max > seq_length)
 
                 % Insert new path
                 new_path{r,c} = seq_path;

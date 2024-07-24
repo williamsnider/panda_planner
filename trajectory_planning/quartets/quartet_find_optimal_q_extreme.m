@@ -1,171 +1,14 @@
-%% Load variables
-clear; close all;
-addpath("../..")
-params = CustomParameters();
-warning('off', 'all');
+%% Clear and load variables
+run quartet_common.m
 
-% Set random stream for reproducibility
-seedval = 123;
-stream = RandStream('mt19937ar', 'Seed', seedval);
-RandStream.setGlobalStream(stream);
-
-%% Load robot with quartert
-[panda_ec_orig, panda_sc_orig] = loadPandaWithShape(params);
-[panda_ec_A, panda_sc_A] = loadPandaWithShape(params);
-[panda_ec_W, panda_sc_W] = loadPandaWithShape(params);
-env = build_collision_environment;
-
-% Plot panda
-plotJointMotion(panda_sc_orig, randomConfiguration(panda_sc_orig), env, params);
-hold on;
-xyz = params.shelf_pts;
-plot3(xyz(:,1), xyz(:,2), xyz(:,3), 'r*')
-
-% Reduce joint limits
-JOINT_REDUCTION = 0.3;
-J7_REDUCTION = 0.2;
-W_SHIFT = [0, 0, -params.cylinderRadius];
-
-
-% Joints 1-6
-for body_num = 1:6
-    oldLimits = panda_sc_orig.Bodies{body_num}.Joint.PositionLimits;
-    newLimits = oldLimits + [JOINT_REDUCTION,-JOINT_REDUCTION];
-    panda_sc_A.Bodies{body_num}.Joint.PositionLimits = newLimits;
-    panda_sc_W.Bodies{body_num}.Joint.PositionLimits = newLimits;
-
-end
-
-% Joint 7
-body_num = 7;
-oldLimits = panda_sc_orig.Bodies{body_num}.Joint.PositionLimits;
-newLimits = oldLimits + [J7_REDUCTION,-J7_REDUCTION];
-panda_sc_A.Bodies{body_num}.Joint.PositionLimits = newLimits;
-panda_sc_W.Bodies{body_num}.Joint.PositionLimits = newLimits;
-
-% Restrict joint 1 to be positive
-body_num = 1;
-oldLimits = panda_sc_W.Bodies{body_num}.Joint.PositionLimits;
-newLimits = [0, oldLimits(2)];
-panda_sc_A.Bodies{body_num}.Joint.PositionLimits = newLimits;
-panda_sc_W.Bodies{body_num}.Joint.PositionLimits = newLimits;
-
-
-% Restrict joint 2 to be positive for panda_A
-body_num = 2;
-oldLimits = panda_sc_A.Bodies{body_num}.Joint.PositionLimits;
-newLimits = [0, oldLimits(2)];
-panda_sc_A.Bodies{body_num}.Joint.PositionLimits = newLimits;
-
-
-% Restrict joint 2 to be negative for panda_W
-body_num = 2;
-oldLimits = panda_sc_W.Bodies{body_num}.Joint.PositionLimits;
-newLimits = [oldLimits(1), 0];
-panda_sc_W.Bodies{body_num}.Joint.PositionLimits = newLimits;
-
-%% Set up inverse kinematics
-ik_A = inverseKinematics('RigidBodyTree',panda_sc_A);
-ik_A.SolverParameters.MaxIterations = 1000;
-ik_W = inverseKinematics('RigidBodyTree',panda_sc_W);
-ik_W.SolverParameters.MaxIterations = 1000;
-ik_orig = inverseKinematics('RigidBodyTree', panda_sc_orig);
-ik_orig.SolverParameters.MaxIterations = 1000;
-
-theta_list = -pi/4:pi/2:5*pi/4;
-
-% ss = ManipulatorStateSpaceSphere(panda_ec, panda_sc);
-% sv = ManipulatorStateValidatorSphere(ss, env, params.validationDistance,params.radius_offset, params);
-% sv.IgnoreSelfCollision = false;
-% sv.Environment = env;
-
-
-
-
-
-%% Find optimal XYZ position
-XYZ_list = [];
-for X = -0.65:-0.02:-0.80
-    for Y = 0.0:0.02:0.20
-        for Z = (12.5:1:25.5)*0.0254
-            XYZ = [X,Y,Z];
-            XYZ_list = [XYZ_list;XYZ];
-        end
-    end
-end
-
-% Get list of quartet shape names
-body_names = {};
-for i = panda_sc_orig.NumBodies-3:panda_sc_orig.NumBodies
-    body_names{end+1} = panda_sc_orig.BodyNames{i};
-end
-
-%
-% %% Explore positions for horizontal
-%
-% parfor XYZ_num = 1:size(XYZ_list,1)
-%
-% %     disp(strcat(num2str(XYZ_num), " of ", num2str(size(XYZ_list,1))))
-%
-%     warning('off', 'all');
-%
-%     XYZ = XYZ_list(XYZ_num,:);
-%
-%     qA_success = zeros(numel(body_names), numel(theta_list));
-%     qW_success = zeros(numel(body_names), numel(theta_list));
-%     for body_num = 1:numel(body_names)
-%         body_name = body_names{body_num};
-%         for theta_num = 1:numel(theta_list)
-%             theta = theta_list(theta_num);
-%
-%             % Calculate correct TA and TW
-%             [TA, TW] = calc_TA_TW(XYZ, theta, W_SHIFT);
-%
-%             % Vertical
-%             initialGuess = randomConfiguration(panda_sc_A);
-%             [qA, solnInfoA] = find_q_from_T(panda_sc_A,body_name, TA, ik_A, initialGuess);
-%
-%             % Horizontal
-%             initialGuess = randomConfiguration(panda_sc_W);
-%             [qW, solnInfoW] = find_q_from_T(panda_sc_W,body_name,TW, ik_W, initialGuess);
-%
-%
-%
-%
-%             % Record
-%             if (~is_robot_in_self_collision_ignore_pairs(panda_sc_A, qA)) && (strcmp(solnInfoA.Status, "success"))
-%                 qA_success(body_num, theta_num) = 1;
-%             end
-%
-%             % Record
-%             if (~is_robot_in_self_collision_ignore_pairs(panda_sc_W, qW)) && (strcmp(solnInfoW.Status, "success"))
-%                 qW_success(body_num, theta_num) = 1;
-%             end
-%
-%         end
-%     end
-%
-%     Anum_invalid = numel(qA_success)-sum(sum(qA_success));
-%     Wnum_invalid = numel(qW_success)-sum(sum(qW_success));
-%
-%     if (Wnum_invalid ==0) &&  (Anum_invalid == 0)
-%         result = strcat("W: ", num2str(XYZ), "      : ", num2str(Wnum_invalid),"\n","A: ", num2str(XYZ), "      : ", num2str(Anum_invalid));
-%         disp(result)
-% %         result = strcat("A: ", num2str(XYZ), "      : ", num2str(Anum_invalid));
-% %         disp(result)
-% %         disp("*****")
-%     end
-%
-% end
-
-
-%% Select XYZ from the above results
-XYZ = [-0.67, 0.06, 0.6477];
+%% Select XYZ quartet_find_optimal_XYZ
+XYZ = [-0.67, 0.06, 0.6477];  % Position of base of shape in qA
 
 % Perform IK
-qA_arr = [];
-qW_arr = [];
+qA_extreme_arr = [];
+qW_extreme_arr = [];
 
+count = 0;
 for body_num = 1:numel(body_names)
     body_name = body_names{body_num};
     for theta_num = 1:numel(theta_list)
@@ -173,6 +16,9 @@ for body_num = 1:numel(body_names)
 
         % Calculate correct TA and TW
         [TA, TW] = calc_TA_TW(XYZ, theta, W_SHIFT);
+
+        disp(count)
+        count = count+1;
 
         % Do IK for 100 valid q's
         num_loops = 100;
@@ -207,16 +53,63 @@ for body_num = 1:numel(body_names)
         qWb = qW_loop(maxidx,:);
 
 
-        qA_arr = [qA_arr;qAa;qAb];
-        qW_arr = [qW_arr;qWa;qWb];
+        qA_extreme_arr = [qA_extreme_arr;qAa;qAb];
+        qW_extreme_arr = [qW_extreme_arr;qWa;qWb];
 
     end
 end
 
-% % Sanity check:
-% plotJointMotion(panda_sc_A, qA_arr(1,:), env, params); hold on;
-% show(panda_sc_A, qA_arr(1,:))
-% show(panda_sc_W, qW_arr(1,:))
+% Sanity check:
+plotJointMotion(panda_sc_A, qA_extreme_arr(1,:), env, params); hold on;
+show(panda_sc_A, qA_extreme_arr(1,:),'collisions','on')
+show(panda_sc_W, qW_extreme_arr(1,:))
+
+num_positions = size(qA_extreme_arr,1);
+
+%% Calculate staging positions and elbow
+Z_SHIFT_EXTREME_TO_STAGING = -0.1;
+
+
+A_struct = struct;
+A_struct.staging_letters = ["A","B","C","D"];
+A_struct.extreme_arr = qA_extreme_arr;
+A_struct.inter_shift = zeros(4);
+A_struct.inter_shift(1,4) = 0.05;  % Toward robot base
+A_struct.inter_shift(3,4) = -0.05;  % Toward floor
+
+extreme_arr = A_struct.extreme_arr;
+staging_arr = zeros(size(extreme_arr));
+elbow_staging_to_extreme_cell = cell(num_positions,1);
+sign_staging_to_extreme_cell = cell(num_positions,1);
+parfor i = 1:size(extreme_arr,1)
+    disp(i)
+    q_extreme = extreme_arr(i,:);
+    [q_staging,elbow_staging_to_extreme, sign_staging_to_extreme] = calc_staging_and_elbow(panda_sc_orig, ik_orig, q_extreme, Z_SHIFT_EXTREME_TO_STAGING);
+    staging_arr(i,:) = q_staging;
+    elbow_staging_to_extreme_cell{i} = elbow_staging_to_extreme;
+    sign_staging_to_extreme_cell{i} = sign_staging_to_extreme;
+end
+
+A_struct.staging_arr = staging_arr;
+A_struct.elbow_staging_to_extreme_cell = elbow_staging_to_extreme_cell;
+A_struct.sign_staging_to_extreme_cell = sign_staging_to_extreme_cell;
+
+
+
+plotJointMotion(panda_sc_orig, qW_extreme_arr(i,:), env, params); hold on;
+show(panda_sc_orig, qW_extreme_arr(i,:), "collisions", "on")
+%% Calculate trajectories between staging and inter positions
+[cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_staging_paths(A_struct.staging_arr,A_struct.inter_shift,panda_ec_orig, panda_sc_orig, ik_orig, env, params);
+
+%% Substitute short paths - find seedval that has similar distributions of same and different motions
+% seedval_sub_short_paths = 123; % qW
+% target_min = 2250;
+% target_max = 4000;
+seedval_sub_short_paths = 2; % qA
+target_min = 3900;
+target_max = 4100;
+[cell_inter_to_inter_sub_70,cell_inter_to_inter_sub_path] = calc_substituted_paths_new(seedval_sub_short_paths, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max);
+plot_histogram_of_traj_lengths(cell_inter_to_inter_sub_70);
 
 %% Inputs for qA vs qW
 
