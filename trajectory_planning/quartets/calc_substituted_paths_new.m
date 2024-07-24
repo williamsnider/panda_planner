@@ -1,10 +1,6 @@
-function [new_traj,new_path] = calc_substituted_paths(seedval, cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max)
+function [new_traj,new_path] = calc_substituted_paths( cell_inter_to_inter_70,cell_inter_to_inter_path, target_min, target_max)
 %CALC_SUBSTITUTED_PATHS Substitute short for multi-segment to prevent same motions from being obvious
 
-
-%%
-stream = RandStream('mt19937ar', 'Seed', seedval);
-RandStream.setGlobalStream(stream);
 
 num_positions = size(cell_inter_to_inter_path,1);
 new_traj = cell(num_positions, num_positions);
@@ -67,58 +63,60 @@ for r = 1:num_positions
 end
 
 
-%% Identify highest minimum sequence length
-highest_min_seq_length = 0;
-for r=1:num_positions
-    for c = r:num_positions
+% 
+% %% Identify highest minimum sequence length
+% highest_min_seq_length = 0;
+% for r=1:num_positions
+%     for c = r:num_positions
+% 
+%         if r==c
+%             continue
+%         end
+% 
+%         seq_lengths = seq_lengths_cell{r,c};
+% 
+%         % Test if this min is greater than our global min
+%         min_seq_length = min(seq_lengths);
+%         if min_seq_length>highest_min_seq_length
+%             highest_min_seq_length = min_seq_length;
+%             disp([r,c, highest_min_seq_length])
+% 
+%         end
+% 
+% 
+%     end
+% end
+% 
+% 
+% %% Identify lower bound
+% lower_bound = Inf;
+% for r=1:num_positions
+%     for c = r:num_positions
+% 
+%         if r==c
+%             continue
+%         end
+% 
+%         seq_lengths = seq_lengths_cell{r,c};
+%         seq_lengths = seq_lengths(seq_lengths<=highest_min_seq_length);
+% 
+%         % Test if this min is greater than our global min
+%         min_seq_length = max(seq_lengths);
+%         if min_seq_length<lower_bound
+%             lower_bound = min_seq_length;
+% 
+%         end
+% 
+% 
+%     end
+% end
 
-        if r==c
-            continue
-        end
-
-        seq_lengths = seq_lengths_cell{r,c};
-
-        % Test if this min is greater than our global min
-        min_seq_length = min(seq_lengths);
-        if min_seq_length>highest_min_seq_length
-            highest_min_seq_length = min_seq_length;
-            disp([r,c, highest_min_seq_length])
-
-        end
-
-
-    end
-end
-
-%% Identify lower bound
-lower_bound = Inf;
-for r=1:num_positions
-    for c = r:num_positions
-
-        if r==c
-            continue
-        end
-
-        seq_lengths = seq_lengths_cell{r,c};
-        seq_lengths = seq_lengths(seq_lengths<=highest_min_seq_length);
-
-        % Test if this min is greater than our global min
-        min_seq_length = max(seq_lengths);
-        if min_seq_length<lower_bound
-            lower_bound = min_seq_length;
-
-        end
-
-
-    end
-end
-
-disp("Lower lower bound")
-lower_bound = lower_bound*3/4
-
+lower_bound = target_min;
+highest_min_seq_length=target_max;
 num_intervals = 4;
 interval_borders = linspace(lower_bound, highest_min_seq_length, num_intervals+1);
-interval_counts = zeros(num_intervals,1);
+interval_counts_diff = zeros(num_intervals,1);
+interval_counts_same = zeros(num_intervals,1);
 
 %% Choose the intermediate values falling within this range
 intermediate_arr = zeros(num_positions, num_positions);
@@ -131,6 +129,12 @@ for r=1:num_positions
 
         seq_lengths = seq_lengths_cell{r,c};
 
+        if (mod(r,2)==1) && (c==r+1)
+            interval_counts = interval_counts_same;
+        else
+            interval_counts = interval_counts_diff;
+        end
+        
         % Sort into intervals based on priority
         [~, interval_idx_ascending] = sort(interval_counts);
 
@@ -143,13 +147,18 @@ for r=1:num_positions
 
             % Test if there is a sequence in this interval
             mask = (seq_lengths>=interval_min).*(seq_lengths<=interval_max);
+
             idx = find(mask);
             if numel(idx)>=1
                 break
             end
         end
 
-        interval_counts(i) = interval_counts(i) + 1;
+        if (mod(r,2)==1) && (c==r+1)
+            interval_counts_same(interval_idx) = interval_counts_diff(interval_idx)+1;
+        else
+            interval_counts_diff(interval_idx) = interval_counts_diff(interval_idx)+1;
+        end
 
         idx = idx(randi(numel(idx)));  % Randomly select
         intermediate_arr(r,c) = idx;

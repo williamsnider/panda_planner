@@ -6,11 +6,13 @@ for r = 1:num_positions
         traj_lengths(r,c) = size(new_traj{r,c},1);
     end
 end
-
-histogram(traj_lengths(:), 'BinEdges', 250:250:5000, 'FaceColor', 'blue');
-hold on;
 traj_lengths_same = diag(traj_lengths,1);
+
+traj_lengths = traj_lengths(traj_lengths>0);
+bin_edges = linspace(min(traj_lengths(:)), max(traj_lengths(:)), 5);
+histogram(traj_lengths(:), 'BinEdges', bin_edges, 'FaceColor', 'blue');
+hold on;
 traj_lengths_same = traj_lengths_same(1:2:end);
-histogram(traj_lengths_same, 'BinEdges', 250:250:5000, 'FaceColor', 'red');
+histogram(traj_lengths_same, 'BinEdges', bin_edges, 'FaceColor', 'red');
 end
 
