@@ -14,6 +14,19 @@ for i = 1:num_positions
     [q_inter, solnInfo] = ik_orig('panda_hand_tcp', T_inter, [1 1 1 1 1 1], q);
 
     % Checks
+    ik_success = strcmp(solnInfo.Status,"success");
+    self_collision = is_robot_in_self_collision_ignore_pairs(panda_sc_orig, q_inter);
+    collisions = checkCollision(panda_sc_orig, q_inter, env);
+    env_collision = collisions(2);
+
+    % Choose a randomly generated but close ik solution
+    if (ik_success==false) || (self_collision==true) || (env_collision==true)
+        disp("Attempting a randomly generated ik...")
+        num_attempts = 500;
+        [q_inter] = ik_avoid_sc(panda_sc_orig, ik_orig, env, T_inter, q, num_attempts);
+    end
+    
+    
     assert(strcmp(solnInfo.Status,"success"))
     assert(~is_robot_in_self_collision_ignore_pairs(panda_sc_orig, q_inter))
     collisions = checkCollision(panda_sc_orig, q_inter, env);

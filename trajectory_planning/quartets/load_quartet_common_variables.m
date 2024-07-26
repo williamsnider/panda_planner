@@ -1,13 +1,14 @@
-%% Load variables
-clear; close all;
-addpath("../..")
-params = CustomParameters();
-warning('off', 'all');
+function [panda_ec_orig, panda_sc_orig, panda_ec_A, panda_sc_A, panda_ec_W, panda_sc_W, ik_orig, ik_A, ik_W, env, body_names, theta_list, W_SHIFT, Z_SHIFT_EXTREME_TO_STAGING] = load_quartet_common_variables(params)
 
-% Set random stream for reproducibility
-seedval = 123;
-stream = RandStream('mt19937ar', 'Seed', seedval);
-RandStream.setGlobalStream(stream);
+
+
+%% Inputs
+theta_list = -pi/4:pi/2:5*pi/4;
+JOINT_REDUCTION = 0.3;  % Safety cutoffs for J1-6 for extreme position (ensures not near joint limits)
+J7_REDUCTION = 0.2;  % Safety cutoff for J7 (have to be more generous because we need 270deg of rotation)
+W_SHIFT = [0.03, 0, 0.02];  % Translation from A to W in extreme position (plus a rotation, as in calc_TA_TW);
+Z_SHIFT_EXTREME_TO_STAGING = -0.1;
+
 
 %% Load robot with quartert
 [panda_ec_orig, panda_sc_orig] = loadPandaWithShape(params);
@@ -15,10 +16,6 @@ RandStream.setGlobalStream(stream);
 [panda_ec_W, panda_sc_W] = loadPandaWithShape(params);
 env = build_collision_environment;
 
-% Reduce joint limits
-JOINT_REDUCTION = 0.3;
-J7_REDUCTION = 0.2;
-W_SHIFT = [0.03, 0, 0.02];  % Translation from A to W in extreme position (plus a rotation, as in calc_TA_TW);
 
 % Joints 1-6
 for body_num = 1:6
@@ -65,7 +62,6 @@ ik_W.SolverParameters.MaxIterations = 1000;
 ik_orig = inverseKinematics('RigidBodyTree', panda_sc_orig);
 ik_orig.SolverParameters.MaxIterations = 1000;
 
-theta_list = -pi/4:pi/2:5*pi/4;
 
 % Get list of quartet shape names
 body_names = {};
