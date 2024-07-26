@@ -1,4 +1,4 @@
-function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_staging_inter(T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig, env)
+function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_staging_inter(SV, T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig, env, params)
     %FIND_Q_EXTREME_STAGING_INTER Summary of this function goes here
 
     extreme_candidates = [];
@@ -27,9 +27,8 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
             continue
         end
 
-        collisions = checkCollision(panda_sc_orig, q_staging, env);
-        env_collision = collisions(2);
-        if env_collision
+        % Check environmental collisions
+        if ~SV.isStateValid(q_staging)
             continue
         end
 
@@ -46,9 +45,8 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
             continue
         end
 
-        collisions = checkCollision(panda_sc_orig, q_inter, env);
-        env_collision = collisions(2);
-        if env_collision
+        % Check environmental collisions
+        if ~SV.isStateValid(q_inter)
             continue
         end
 
@@ -62,6 +60,12 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
         staging_candidates = [staging_candidates; q_staging];
         inter_candidates = [inter_candidates; q_inter];
     end
+
+    % Breakpoint for debugging
+    if numel(extreme_candidates)==0
+        dummy=0;
+    end
+
 
     % Choose two furthest q_extremes based on joint 1
     [~, minidx] = min(extreme_candidates(:,1));

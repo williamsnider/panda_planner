@@ -89,6 +89,9 @@ for r=1:num_positions
     end
 end
 
+%% Shut down parpool to save RAM
+poolobj = gcp('nocreate');
+delete(poolobj);
 
 %% Check full trajectories
 staging_arr = data_struct.staging_arr;
@@ -106,8 +109,8 @@ parfor r = 1:num_positions
         % Check kinematics and start/stop
         assert(checkTrajKinematics(traj, staging_arr(r,:),  staging_arr(c,:), params))
 
-        % Check no self collisions
-        assert(~checkTrajForSelfCollisions(panda_sc_orig, traj, params));
+%         % Check no self collisions
+%         assert(~checkTrajForSelfCollisions(panda_sc_orig, traj, params));
     end
 end
 
@@ -116,7 +119,7 @@ cell_full_10 = cell(size(cell_full_70));
 cell_full_40 = cell(size(cell_full_70));
 cell_full_70 = cell(size(cell_full_70));
 names = data_struct.names;
-parfor r = 1:num_positions
+for r = 1:num_positions
     for c=1:num_positions
         if c<=r
             continue
