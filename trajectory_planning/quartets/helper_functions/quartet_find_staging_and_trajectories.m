@@ -138,8 +138,6 @@ for r = 1:num_positions
         cell_full_40{r,c} = traj_40;
         cell_full_70{r,c} = traj_70;
 
-        
-
         % Write to CSV - forward
         r_name = names{r};
         c_name = names{c};
