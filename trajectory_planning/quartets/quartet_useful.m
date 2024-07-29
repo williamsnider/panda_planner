@@ -2,28 +2,21 @@
 % specific slot)
 
 clear; close all;
-addpath("..")
+addpath("../..")
 params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
 prefix = '20240728_';
-SAVE_DIR = ['paths/useful/',prefix];
+SAVE_DIR = 'paths/useful/';
 
 mkdir(SAVE_DIR);
 addpath(SAVE_DIR);
 
 %% Generate list of staging positions 
-A= load(['paths/',prefix,'A.mat']);
-qA = qA.qA;
-qW = load(['paths/',prefix,'W.mat'], "qW");
-qW = qW.qW;
-
-% Names
-qA_letters = ["A","B","C","D"];
-qA_names =  generate_staging_names(qA_letters);
-
-qW_letters = ["W","X","Y","Z"];
-qW_names =  generate_staging_names(qW_letters);
+A_struct = load(['paths/',prefix,'A.mat'],'data_struct');
+A_struct = A_struct.data_struct;
+W_struct = load(['paths/',prefix,'W.mat'], 'data_struct');
+W_struct = W_struct.data_struct;
 
 
 % %% Hold at home position
@@ -35,42 +28,44 @@ qW_names =  generate_staging_names(qW_letters);
 
 %% Paths between home and staging
 
-num_positions = size(qA.qA_arr,1);
+num_positions = numel(A_struct.names);
 for i = 1:2
 
     if i == 1
-        names = qA_names;
-        arr = qA.qA_arr;
-        inter = qA.cell_staging_to_inter_path;
+        data_struct = A_struct;
     else
-        names = qW_names;
-        arr = qW.qW_arr;
-        inter = qW.cell_staging_to_inter_path;
+        data_struct = W_struct;
     end
 
-    parfor j = 1:num_positions
+    for j = 1:num_positions
 
-        name = names{j};
-        q_staging = arr(j,:);
-        q_inter = inter{j}(2,:);
-        goal = params.q_home;
+        name = data_struct.names{j};
+        q_staging = data_struct.staging_arr(j,:);
+        q_inter = data_struct.inter_arr(j,:);
+        q_goal = params.q_home;
 
         % Sanity check
-        assert(sum(abs(q_staging-inter{j}(1,:)))<0.001);
+        assert(sum(abs(q_staging-q_inter(1,:)))<1.0);
 
         % Plan path from q_staging_to q_inter to q_home  at 70% max speed      
         params_copy = params;
         params_copy.vScale = 0.7;
         params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-        [~, planned_path] = planJointToJoint(panda_ec, panda_sc, env, q_inter, goal, params_copy);
-        planned_path = [q_staging;planned_path]; % Add q_staging to inter positionn
+        [~, planned_path_inter_to_home] = planJointToJoint(panda_ec, panda_sc, env, q_inter, q_goal, params_copy);
         
-        [traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(planned_path, panda_sc,params)
+        % Check that inter is the same and combine
+        planned_path_staging_to_inter = data_struct.cell_staging_to_inter_path{j};
+        assert(sum(sum(abs(planned_path_staging_to_inter(end,:)-planned_path_inter_to_home(1,:))))<0.001)
+    
+
+        planned_path_staging_inter_home = [planned_path_staging_to_inter(1:end-1,:);planned_path_inter_to_home]; % Add q_staging to inter positionn
+        
+        [traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(planned_path_staging_inter_home, panda_sc,params);
         
         % Write to CSV
-        fname_base = strcat(SAVE_DIR, "staging", name,"_to_home");
+        fname_base = strcat(SAVE_DIR,prefix, "staging", name,"_to_home");
         write_to_CSV_10_40_70(traj_10,traj_40,traj_70,fname_base)
-        fname_base = strcat(SAVE_DIR, "home_to_staging",name)
+        fname_base = strcat(SAVE_DIR, prefix,"home_to_staging",name);
         write_to_CSV_10_40_70(traj_10_reverse,traj_40_reverse,traj_70_reverse,fname_base)
 
 
@@ -79,37 +74,6 @@ for i = 1:2
 end
 
 
-%% Paths between W and A
-
-for A_idx = 1:2
-    A_staging = qA.qA_arr(A_idx,:);
-    A_inter = qA.cell_staging_to_inter_path{A_idx}(2,:);
-    A_name = qA_names{A_idx};
-
-    for W_idx = 1:2
-        W_staging = qW.qW_arr(W_idx,:);
-        W_inter = qW.cell_staging_to_inter_path{W_idx}(2,:);
-        W_name = qW_names{W_idx};
-        
-        % Calculate path between inter
-        params_copy = params;
-        params_copy.vScale = 0.7;
-        params_copy.vMaxAll = params_copy.vMaxAllAbsolute*params_copy.vScale;
-        [~, planned_path] = planJointToJoint(panda_ec, panda_sc, env, A_inter, W_inter, params_copy);
-        planned_path = [A_staging;planned_path;W_staging];
-        
-        % CalculaTe trajectories at 10, 40, 70% max speed
-        [traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(planned_path, panda_sc,params);
-        
-        % Write to CSV - forward
-        fname_base = strcat(SAVE_DIR, "staging", A_name,"_to_","staging",W_name);
-        write_to_CSV_10_40_70(traj_10, traj_40, traj_70, fname_base);
-        
-        % Write to CSV - reverse
-        fname_base = strcat(SAVE_DIR, "staging", W_name,"_to_","staging",A_name);
-        write_to_CSV_10_40_70(traj_10_reverse, traj_40_reverse, traj_70_reverse, fname_base);
-        end
-end
 
 
 
