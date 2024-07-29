@@ -13,7 +13,7 @@ data_struct = struct;
 %% Assign values to struct
 data_struct.XYZ = [-0.67, 0.06, 0.5969];  % Position of base of shape in qA - should be identical to W orientations!
 data_struct.savedir = strcat(params.CustomParametersDir,'/trajectory_planning/quartets/paths/');
-data_struct.prefix = "20240726";
+data_struct.prefix = "20240728";
 data_struct.Z_SHIFT_EXTREME_TO_STAGING = -0.1;
 data_struct.staging_letters = ["A","B","C","D"];
 data_struct.target_path_length_min = 3000;

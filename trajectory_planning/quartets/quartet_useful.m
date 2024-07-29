@@ -6,16 +6,16 @@ addpath("..")
 params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
-prefix = '20240722_';
-SAVE_DIR = ['trajectories/useful/',prefix];
+prefix = '20240728_';
+SAVE_DIR = ['paths/useful/',prefix];
 
 mkdir(SAVE_DIR);
 addpath(SAVE_DIR);
 
 %% Generate list of staging positions 
-qA= load(['trajectories/',prefix,'qA.mat'], "qA");
+A= load(['paths/',prefix,'A.mat']);
 qA = qA.qA;
-qW = load(['trajectories/',prefix,'qW.mat'], "qW");
+qW = load(['paths/',prefix,'W.mat'], "qW");
 qW = qW.qW;
 
 % Names

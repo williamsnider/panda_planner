@@ -119,7 +119,7 @@ cell_full_10 = cell(size(cell_full_70));
 cell_full_40 = cell(size(cell_full_70));
 cell_full_70 = cell(size(cell_full_70));
 names = data_struct.names;
-for r = 1:num_positions
+parfor r = 1:num_positions
     for c=1:num_positions
         if c<=r
             continue
@@ -178,7 +178,7 @@ for i = 1:num_positions
     
     % Sanity check
     elbow_q = elbow_LUT(1,:);
-    assert(all(elbow_q==data_struct.staging_arr(i,1:7)));
+    assert(sum(sum(abs(elbow_q-data_struct.staging_arr(i,1:7))))<0.00001);
 
     writematrix(elbow_LUT, fname)
 end
@@ -187,6 +187,6 @@ end
 %% Save struct
 
 % Save the struct to a single .mat file
-save(strcat(data_struct.mat_dir, data_struct.prefix,"_",data_struct.staging_letters(1),".mat"), "data_struct");
+save(strcat(data_struct.mat_dir, data_struct.prefix,"_",data_struct.staging_letters(1),".mat"), 'data_struct', '-v7.3'); % Specify version because file is large.
 end
 
