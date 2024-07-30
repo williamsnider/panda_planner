@@ -7,15 +7,15 @@ params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
 prefix = '20240728_';
-SAVE_DIR = 'paths/useful/';
+SAVE_DIR = 'trajectories/useful/';
 
 mkdir(SAVE_DIR);
 addpath(SAVE_DIR);
 
 %% Generate list of staging positions 
-A_struct = load(['paths/',prefix,'A.mat'],'data_struct');
+A_struct = load(['trajectories/',prefix,'A.mat'],'data_struct');
 A_struct = A_struct.data_struct;
-W_struct = load(['paths/',prefix,'W.mat'], 'data_struct');
+W_struct = load(['trajectories/',prefix,'W.mat'], 'data_struct');
 W_struct = W_struct.data_struct;
 
 
@@ -63,7 +63,7 @@ for i = 1:2
         [traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(planned_path_staging_inter_home, panda_sc,params);
         
         % Write to CSV
-        fname_base = strcat(SAVE_DIR,prefix, "staging", name,"_to_home");
+        fname_base = strcat(SAVE_DIR,prefix, "staging", name,"_to_home")
         write_to_CSV_10_40_70(traj_10,traj_40,traj_70,fname_base)
         fname_base = strcat(SAVE_DIR, prefix,"home_to_staging",name);
         write_to_CSV_10_40_70(traj_10_reverse,traj_40_reverse,traj_70_reverse,fname_base)
