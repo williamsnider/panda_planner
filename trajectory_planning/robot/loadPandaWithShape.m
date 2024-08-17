@@ -49,8 +49,8 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
 
 
         % Add collision mesh to the body
-        collisionBody = collisionCylinder(cylinderRadius, 2*cylinderLength);  % Since the cylinder is centered, need 2*cylinderLength
-        collisionBody.Pose(3,4) = collisionBody.Pose(3,4); 
+        collisionBody = collisionCylinder(cylinderRadius, 1.5*cylinderLength);  % Since the cylinder is centered, need 2*cylinderLength
+        collisionBody.Pose(3,4) = collisionBody.Pose(3,4) + 0.5*cylinderLength/2; % full length extending, half length extending back
         addCollision(body, collisionBody);
     
         % Attach to the robot tree
