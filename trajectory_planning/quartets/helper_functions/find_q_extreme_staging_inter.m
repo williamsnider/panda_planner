@@ -23,6 +23,8 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
         % Generate staging from extreme
         [q_staging, solnInfo] = find_q_from_T(panda_sc_orig, body_name, T_staging, ik_orig, q_extreme);
 
+%         plotJointMotion(panda_sc_orig, q_staging, env, params); hold on; show(panda_sc_orig, q_staging, 'collisions', 'on')
+
         if ~strcmp(solnInfo.Status, "success") || is_robot_in_self_collision_ignore_pairs(panda_sc_orig, q_staging)
             continue
         end
@@ -32,7 +34,7 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
             continue
         end
 
-        MAX_DIST = 1.0;
+        MAX_DIST = 2.0;
         dist = sum(abs((q_staging - q_extreme)));
         if dist > MAX_DIST
             continue
@@ -77,11 +79,14 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
     q_staging_12 = [staging_candidates(minidx,:); staging_candidates(maxidx,:)];
     
     % First q_extreme
-    num_steps = 1001;
     T_extreme_TCP = getTransform(panda_sc_orig, q_extreme_12(1,:), 'panda_hand_tcp');
     T_staging_TCP = T_extreme_TCP+T_extreme_to_staging;
-    [q_extreme_to_staging_arr, z_vals_extreme_to_staging] = calc_cartesian_path_q1_q2(q_extreme_12(1,:), q_staging_12(1,:), T_extreme_TCP, T_staging_TCP, ik_orig, panda_sc_orig, 'panda_hand_tcp', num_steps);
-    elbow_LUT_1 = construct_elbow_LUT(q_extreme_to_staging_arr,z_vals_extreme_to_staging);
+    num_steps = round(abs(T_extreme_TCP(1,4) - T_staging_TCP(1,4))/0.0001)+1;
+    assert(num_steps == 2001);
+    
+
+    [q_extreme_to_staging_arr, x_vals_extreme_to_staging] = calc_cartesian_path_q1_q2(q_extreme_12(1,:), q_staging_12(1,:), T_extreme_TCP, T_staging_TCP, ik_orig, panda_sc_orig, 'panda_hand_tcp', num_steps);
+    elbow_LUT_1 = construct_elbow_LUT(q_extreme_to_staging_arr,x_vals_extreme_to_staging);
     assert(sum(sum(abs(elbow_LUT_1(1,:)-q_staging_12(1,1:7))))<0.0001);
 
     % Second q_extreme

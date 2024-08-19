@@ -10,15 +10,12 @@ function data_struct = quartet_XYZ_to_trajectories(data_struct, env, params)
     body_names = data_struct.body_names;
     theta_list = data_struct.theta_list;
     XYZ = data_struct.XYZ;
-    W_SHIFT = data_struct.W_SHIFT;
     T_extreme_to_staging = data_struct.T_extreme_to_staging;
     T_staging_to_inter = data_struct.T_staging_to_inter;
     panda_sc_restricted = data_struct.panda_sc_restricted;
     panda_sc_orig = data_struct.panda_sc_orig;
     ik_restricted = data_struct.ik_restricted;
     ik_orig = data_struct.ik_orig;
-    panda_ec_orig = data_struct.panda_ec_orig;
-    Z_SHIFT_EXTREME_TO_STAGING = data_struct.Z_SHIFT_EXTREME_TO_STAGING;
 
 
 
@@ -28,7 +25,7 @@ function data_struct = quartet_XYZ_to_trajectories(data_struct, env, params)
         for theta_num = 1:numel(theta_list)
             body_name = body_names{body_num};
             theta = theta_list(theta_num);
-            T_extreme = calc_T(XYZ, theta, W_SHIFT); 
+            T_extreme = calc_T(XYZ, theta); 
             body_theta_combs{end+1} = {body_name, theta, T_extreme};
         end
     end
@@ -40,7 +37,7 @@ function data_struct = quartet_XYZ_to_trajectories(data_struct, env, params)
     A_inter_cell = cell(numel(body_theta_combs),1);
     A_elbow_LUT_cell_paired = cell(numel(body_theta_combs),1);
 
-    parfor body_theta_num = 1:numel(body_theta_combs)
+    for body_theta_num = 1:numel(body_theta_combs)
         warning('off', 'all');
         disp(body_theta_num)
         body_name = body_theta_combs{body_theta_num}{1};

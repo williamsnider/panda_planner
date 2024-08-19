@@ -44,6 +44,12 @@ mkdir(data_struct.elbow_dir);
 %% Calculate trajectories between staging and inter positions
 [cell_staging_to_inter_70, cell_staging_to_inter_path, cell_inter_to_inter_70, cell_inter_to_inter_path] = calc_between_inter_paths(data_struct.staging_arr,data_struct.inter_arr,panda_ec_orig, panda_sc_orig, env, params);
 
+
+% Find longest path
+plot_histogram_of_traj_lengths(cell_inter_to_inter_70)
+waitforbuttonpress();
+plotJointMotion(panda_sc_orig, cell_inter_to_inter_70{7,5}, env, params)
+
 %% Substitute short paths to ensure that all the staging_to_staging trajectories are the same length
 
 % Set random stream for reproducibility

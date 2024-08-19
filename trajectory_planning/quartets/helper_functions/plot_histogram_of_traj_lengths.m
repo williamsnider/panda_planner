@@ -7,12 +7,15 @@ for r = 1:num_positions
     end
 end
 traj_lengths_same = diag(traj_lengths,1);
-
 traj_lengths = traj_lengths(traj_lengths>0);
 bin_edges = linspace(min(traj_lengths(:)), max(traj_lengths(:)), 5);
 histogram(traj_lengths(:), 'BinEdges', bin_edges, 'FaceColor', 'blue');
 hold on;
 traj_lengths_same = traj_lengths_same(1:2:end);
 histogram(traj_lengths_same, 'BinEdges', bin_edges, 'FaceColor', 'red');
+
+% Display highest length pairs
+[r,c] = find(traj_lengths==max(max(traj_lengths)), 1)
+disp(traj_lengths(r,c))
 end
 
