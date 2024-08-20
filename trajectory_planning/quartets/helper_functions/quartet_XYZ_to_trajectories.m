@@ -37,7 +37,7 @@ function data_struct = quartet_XYZ_to_trajectories(data_struct, env, params)
     A_inter_cell = cell(numel(body_theta_combs),1);
     A_elbow_LUT_cell_paired = cell(numel(body_theta_combs),1);
 
-    for body_theta_num = 1:numel(body_theta_combs)
+    parfor body_theta_num = 1:numel(body_theta_combs)
         warning('off', 'all');
         disp(body_theta_num)
         body_name = body_theta_combs{body_theta_num}{1};
@@ -45,7 +45,8 @@ function data_struct = quartet_XYZ_to_trajectories(data_struct, env, params)
         T_extreme = body_theta_combs{body_theta_num}{3};
         SV = data_struct.SV;
 
-        [q_extreme, q_staging, q_inter, elbow_cell] = find_q_extreme_staging_inter(SV, T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig, env,params);
+        stop_early_if_any_found = false;
+        [q_extreme, q_staging, q_inter, elbow_cell] = find_q_extreme_staging_inter(SV, T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig,stop_early_if_any_found, env,params);
         A_extreme_cell{body_theta_num} = q_extreme;
         A_staging_cell{body_theta_num} = q_staging;
         A_inter_cell{body_theta_num} = q_inter;

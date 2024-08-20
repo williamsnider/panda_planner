@@ -25,8 +25,8 @@ warning('off', 'all');
 
 %% Create list of XYZ positions to test
 XYZ_list = [];
-for X = -0.65:-0.02:-0.80
-    for Y = 0.0:0.02:0.12
+for X = -0.65:-0.02:-0.75
+    for Y = 0.06:0.02:0.10
         for Z = (19.5:1:25.5)*0.0254
             XYZ = [X,Y,Z];
             XYZ_list = [XYZ_list;XYZ];
@@ -35,6 +35,12 @@ for X = -0.65:-0.02:-0.80
 end
 
 %% Test whether each XYZ position is valid for both A and W orientations
+SV = construct_state_validator(panda_ec_orig, panda_sc_orig, env, params);
+panda_sc_restricted = panda_sc_A;
+ik_restricted = ik_A;
+
+% XYZ_list = [-0.67, 0.08, 0.6477];
+
 parfor XYZ_num = 1:size(XYZ_list,1)
     warning('off', 'all');
 
@@ -42,40 +48,65 @@ parfor XYZ_num = 1:size(XYZ_list,1)
 
     qA_success = zeros(numel(body_names), numel(theta_list));
 %     qW_success = zeros(numel(body_names), numel(theta_list));
+
+    any_invalid = false;
     for body_num = 1:numel(body_names)
         body_name = body_names{body_num};
+
+        if any_invalid==true
+            break
+        end
+        
         for theta_num = 1:numel(theta_list)
+            
+            if any_invalid==true
+                break
+            end
+            
             theta = theta_list(theta_num);
 
-            % Calculate correct TA and TW
-            TA = calc_TA(XYZ, theta);
+            % Calculate correct T
+            T_extreme = calc_TA(XYZ, theta);
+            T_extreme_to_staging = zeros(4);
+            T_extreme_to_staging(1,4) = X_SHIFT_EXTREME_TO_STAGING;
+            T_staging_to_inter = zeros(4);
+            T_staging_to_inter(1,4) = 0.05;
 
-            % Horizontal - extreme
-            initialGuess = randomConfiguration(panda_sc_A);
-            [qA_extreme, solnInfoA_extreme] = find_q_from_T(panda_sc_A,body_name, TA, ik_A, initialGuess);
+            early_stop_if_any_found = true;
+            [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_staging_inter(SV, T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig, early_stop_if_any_found, env, params);
 
-            % Horizontal - staging
-            T_staging = TA;
-            T_staging(1,4) = T_staging(1,4) + X_SHIFT_EXTREME_TO_STAGING;
-            initialGuess = randomConfiguration(panda_sc_A);
-            [qA_staging, solnInfoA_staging] = find_q_from_T(panda_sc_orig,body_name, T_staging, ik_A, qA_extreme);
-% 
-
-            dist = sum(abs(qA_staging-qA_extreme));
-
-%             % Vertical
-%             initialGuess = randomConfiguration(panda_sc_W);
-%             [qW, solnInfoW] = find_q_from_T(panda_sc_W,body_name,TW, ik_W, initialGuess);
-
-            % Record
-            if (~is_robot_in_self_collision_ignore_pairs(panda_sc_A, qA_extreme)) && (strcmp(solnInfoA_extreme.Status, "success") && ~is_robot_in_self_collision_ignore_pairs(panda_sc_orig, qA_staging)) && (strcmp(solnInfoA_staging.Status, "success") && dist<2.0)
+            
+            if size(q_extreme_12,1)==2
                 qA_success(body_num, theta_num) = 1;
+            else
+                any_invalid=true;
             end
-
+            %             % Horizontal - extreme
+%             initialGuess = randomConfiguration(panda_sc_A);
+%             [qA_extreme, solnInfoA_extreme] = find_q_from_T(panda_sc_A,body_name, TA, ik_A, initialGuess);
+% 
+%             % Horizontal - staging
+%             T_staging = TA;
+%             T_staging(1,4) = T_staging(1,4) + X_SHIFT_EXTREME_TO_STAGING;
+%             initialGuess = randomConfiguration(panda_sc_A);
+%             [qA_staging, solnInfoA_staging] = find_q_from_T(panda_sc_orig,body_name, T_staging, ik_A, qA_extreme);
+% % 
+% 
+%             dist = sum(abs(qA_staging-qA_extreme));
+% 
+% %             % Vertical
+% %             initialGuess = randomConfiguration(panda_sc_W);
+% %             [qW, solnInfoW] = find_q_from_T(panda_sc_W,body_name,TW, ik_W, initialGuess);
+% 
 %             % Record
-%             if (~is_robot_in_self_collision_ignore_pairs(panda_sc_W, qW)) && (strcmp(solnInfoW.Status, "success"))
-%                 qW_success(body_num, theta_num) = 1;
+%             if (~is_robot_in_self_collision_ignore_pairs(panda_sc_A, qA_extreme)) && (strcmp(solnInfoA_extreme.Status, "success") && ~is_robot_in_self_collision_ignore_pairs(panda_sc_orig, qA_staging)) && (strcmp(solnInfoA_staging.Status, "success") && dist<2.0)
+%                 qA_success(body_num, theta_num) = 1;
 %             end
+% 
+% %             % Record
+% %             if (~is_robot_in_self_collision_ignore_pairs(panda_sc_W, qW)) && (strcmp(solnInfoW.Status, "success"))
+% %                 qW_success(body_num, theta_num) = 1;
+% %             end
 
         end
     end

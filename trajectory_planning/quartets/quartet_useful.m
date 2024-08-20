@@ -6,17 +6,17 @@ addpath("../..")
 params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
-prefix = '20240818_';
-SAVE_DIR = 'trajectories/useful/';
+prefix = '20240820_';
+SAVE_DIR = 'paths/useful/';
 
 mkdir(SAVE_DIR);
 addpath(SAVE_DIR);
 
 %% Generate list of staging positions 
-A_struct = load(['trajectories/',prefix,'A.mat'],'data_struct');
+A_struct = load(['paths/',prefix,'A.mat'],'data_struct');
 A_struct = A_struct.data_struct;
-W_struct = load(['trajectories/',prefix,'W.mat'], 'data_struct');
-W_struct = W_struct.data_struct;
+% W_struct = load(['trajectories/',prefix,'W.mat'], 'data_struct');
+% W_struct = W_struct.data_struct;
 
 
 % %% Hold at home position
@@ -29,7 +29,7 @@ W_struct = W_struct.data_struct;
 %% Paths between home and staging
 
 num_positions = numel(A_struct.names);
-for i = 1:2
+for i = 1:1
 
     if i == 1
         data_struct = A_struct;

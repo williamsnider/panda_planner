@@ -2,7 +2,7 @@ function elbow_LUT = construct_elbow_LUT(q_extreme_to_staging_arr,x_vals_extreme
 %CONSTRUCT_ELBOW_LUT Summary of this function goes here
 %   Detailed explanation goes here
 
-assert(numel(x_vals_extreme_to_staging)==2001);
+assert(numel(x_vals_extreme_to_staging)==1501);
 
 elbow_staging_to_extreme = flip(q_extreme_to_staging_arr(:,3),1);
 sign_staging_to_extreme = flip(sign(q_extreme_to_staging_arr(:,4)),1);

@@ -1,4 +1,4 @@
-function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_staging_inter(SV, T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig, env, params)
+function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_staging_inter(SV, T_extreme, body_name, T_extreme_to_staging, T_staging_to_inter, panda_sc_restricted, panda_sc_orig, ik_restricted, ik_orig, early_stop_if_any_found, env, params)
     %FIND_Q_EXTREME_STAGING_INTER Summary of this function goes here
 
     extreme_candidates = [];
@@ -34,7 +34,7 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
             continue
         end
 
-        MAX_DIST = 2.0;
+        MAX_DIST = 2.5;
         dist = sum(abs((q_staging - q_extreme)));
         if dist > MAX_DIST
             continue
@@ -61,6 +61,16 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
         extreme_candidates = [extreme_candidates; q_extreme];
         staging_candidates = [staging_candidates; q_staging];
         inter_candidates = [inter_candidates; q_inter];
+
+        
+        if (early_stop_if_any_found==true) && (size(extreme_candidates,1)>1)
+            q_extreme_12 = extreme_candidates(1:2,:);
+            q_staging_12 = staging_candidates(1:2,:);
+            q_inter_12 = inter_candidates(1:2,:);
+            elbow_12 = [];
+            return
+        end
+
     end
 
     % Breakpoint for debugging
@@ -68,6 +78,14 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
         dummy=0;
     end
 
+    % Return if nothing found
+    if size(extreme_candidates,1) < 2
+        q_extreme_12 = [];
+        q_staging_12 = [];
+        q_inter_12 = [];
+        elbow_12 = [];
+        return
+    end
 
     % Choose two furthest q_extremes based on joint 1
     [~, minidx] = min(extreme_candidates(:,1));
@@ -82,7 +100,7 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
     T_extreme_TCP = getTransform(panda_sc_orig, q_extreme_12(1,:), 'panda_hand_tcp');
     T_staging_TCP = T_extreme_TCP+T_extreme_to_staging;
     num_steps = round(abs(T_extreme_TCP(1,4) - T_staging_TCP(1,4))/0.0001)+1;
-    assert(num_steps == 2001);
+    assert(num_steps == 1501);
     
 
     [q_extreme_to_staging_arr, x_vals_extreme_to_staging] = calc_cartesian_path_q1_q2(q_extreme_12(1,:), q_staging_12(1,:), T_extreme_TCP, T_staging_TCP, ik_orig, panda_sc_orig, 'panda_hand_tcp', num_steps);
