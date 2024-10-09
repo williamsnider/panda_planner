@@ -7,13 +7,13 @@ params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
 prefix = '20240820_';
-SAVE_DIR = 'paths/useful/';
+SAVE_DIR = 'trajectories/useful/';
 
 mkdir(SAVE_DIR);
 addpath(SAVE_DIR);
 
 %% Generate list of staging positions 
-A_struct = load(['paths/',prefix,'A.mat'],'data_struct');
+A_struct = load(['trajectories/',prefix,'A.mat'],'data_struct');
 A_struct = A_struct.data_struct;
 % W_struct = load(['trajectories/',prefix,'W.mat'], 'data_struct');
 % W_struct = W_struct.data_struct;

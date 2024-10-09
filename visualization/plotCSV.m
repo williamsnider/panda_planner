@@ -10,4 +10,3 @@ anglesArray = [anglesArray, fingerPositions];
 % Plot motion
 plotJointMotion(panda_sc, anglesArray, env, params)
 end
-
