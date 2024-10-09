@@ -82,7 +82,7 @@ collision_objects{end+1} = box;
 
 %% Monkey reaching box
 box_dims_m = [0.01, 0.5, 0.5];
-box_trans_m = [-0.60, 0.08, 0.6477] + [-0.02-0.125, 0.0, 0.0];
+box_trans_m = [-0.57, 0.08, 0.6477] + [-0.02-0.125, 0.0, 0.0];
 box = collisionBox(box_dims_m(1), box_dims_m(2), box_dims_m(3));
 T = trvec2tform(box_trans_m);
 box.Pose = T;
