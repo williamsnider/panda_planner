@@ -6,7 +6,7 @@ addpath("../..")
 params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
-prefix = '20240820_';
+prefix = '20241009_';
 SAVE_DIR = 'trajectories/useful/';
 
 mkdir(SAVE_DIR);
