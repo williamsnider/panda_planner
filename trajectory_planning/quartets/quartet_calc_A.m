@@ -11,13 +11,13 @@ warning('off', 'all');
 data_struct = struct;
 
 %% Assign values to struct
-data_struct.XYZ = [-0.67 , 0.08, 0.6477];  % Position of base of shape in qA - should be identical to W orientations!
+data_struct.XYZ = [-0.73 , 0.08, 0.6477];  % Position of base of shape in qA - should be identical to W orientations!
 data_struct.savedir = strcat(params.CustomParametersDir,'/trajectory_planning/quartets/paths/');
-data_struct.prefix = "20240820";
+data_struct.prefix = "20241008";
 data_struct.X_SHIFT_EXTREME_TO_STAGING = X_SHIFT_EXTREME_TO_STAGING;
 data_struct.staging_letters = ["A","B","C","D"];
 data_struct.target_path_length_min = 2500;
-data_struct.target_path_length_max = 4500;
+data_struct.target_path_length_max = 5000;
 data_struct.mat_dir = data_struct.savedir;
 data_struct.traj_dir = strcat(data_struct.savedir, data_struct.staging_letters(1), "/trajectories/");
 data_struct.elbow_dir = strcat(data_struct.savedir, data_struct.staging_letters(1), "/elbow_LUTs/");
@@ -44,3 +44,10 @@ data_struct = quartet_XYZ_to_trajectories(data_struct, env, params);
  
 %% Convert XYZ_to_trajectories
 data_struct = quartet_find_staging_and_trajectories(data_struct, panda_ec_orig, panda_sc_orig, ik_orig, env, X_SHIFT_EXTREME_TO_STAGING, params);
+
+
+%% Visualize
+q_staging = [data_struct.cell_full_70{1,2}(1,:), 0.01, 0.01];
+plotJointMotion(panda_sc_orig, q_staging, env, params);
+hold on;
+show(panda_sc_orig, q_staging, "Collisions", "on")

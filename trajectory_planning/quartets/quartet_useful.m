@@ -6,7 +6,7 @@ addpath("../..")
 params = CustomParameters();
 [panda_ec, panda_sc] = loadPandaWithShape(params);
 env = build_collision_environment();
-prefix = '20240820_';
+prefix = '20241008_';
 SAVE_DIR = 'paths/useful/';
 
 mkdir(SAVE_DIR);
@@ -45,7 +45,7 @@ for i = 1:1
         q_goal = params.q_home;
 
         % Sanity check
-        assert(sum(abs(q_staging-q_inter(1,:)))<1.0);
+        assert(sum(abs(q_staging-q_inter(1,:)))<1.5);
 
         % Plan path from q_staging_to q_inter to q_home  at 70% max speed      
         params_copy = params;

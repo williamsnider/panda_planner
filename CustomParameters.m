@@ -67,7 +67,7 @@ classdef CustomParameters
 staging_box_width = 0.37; 
 staging_box_height = 1.2; 
 staging_box_length = 0.85; 
-staging_box_center = [-0.52, -0.05, 0.5]; % Replace with the desired center coordinates [x, y, z]
+staging_box_center = [-0.60, -0.05, 0.5]; % Replace with the desired center coordinates [x, y, z]
             
 
 

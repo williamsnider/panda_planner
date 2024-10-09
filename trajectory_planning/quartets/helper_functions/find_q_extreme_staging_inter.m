@@ -76,6 +76,7 @@ function [q_extreme_12, q_staging_12, q_inter_12, elbow_12] = find_q_extreme_sta
     % Breakpoint for debugging
     if numel(extreme_candidates)==0
         dummy=0;
+        plotJointMotion(panda_sc_orig, q_staging, env, params)
     end
 
     % Return if nothing found
