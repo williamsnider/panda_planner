@@ -1,4 +1,4 @@
-function paths_struct= calcSlotTrajectories(panda_ec, panda_sc, env, ik, q_slot, savename, stateBounds, params)
+function paths_struct= calcSlotTrajectories(panda_ec, panda_sc, env, ik, q_slot, savename, stateBounds,staging_data, params)
 
 %% Gather needed parameters
 ABOVE_HEIGHT = params.ABOVE_HEIGHT;
@@ -105,29 +105,35 @@ q_out = paths_struct.above_to_out(end,1:9);
 % 
 % % Paths
 paths_struct.wpts_home_to_out = joint_plan_path(panda_ec, panda_sc, env, q_home, q_out, params);
-paths_struct.wpts_out_to_stagingA0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingA0, params);
-paths_struct.wpts_out_to_stagingB0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingB0, params);
-paths_struct.wpts_out_to_stagingC0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingC0, params);
-paths_struct.wpts_out_to_stagingD0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingD0, params);
-paths_struct.wpts_out_to_stagingE0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingE0, params);
+paths_struct.wpts_out_to_inter = joint_plan_path(panda_ec, panda_sc, env, q_out, staging_data.q_inter, params);
+paths_struct.wpts_out_to_inter_to_staging = [paths_struct.wpts_out_to_inter; staging_data.q_staging];
+% paths_struct.wpts_out_to_stagingA0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingA0, params);
+% paths_struct.wpts_out_to_stagingB0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingB0, params);
+% paths_struct.wpts_out_to_stagingC0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingC0, params);
+% paths_struct.wpts_out_to_stagingD0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingD0, params);
+% paths_struct.wpts_out_to_stagingE0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingE0, params);
 
-% % Trajectories
-paths_struct.home_to_out = joint_path_to_traj(paths_struct.wpts_home_to_out, params);
-paths_struct.out_to_stagingA0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingA0, params);
-paths_struct.out_to_stagingB0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingB0, params);
-paths_struct.out_to_stagingC0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingC0, params);
-paths_struct.out_to_stagingD0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingD0, params);
-paths_struct.out_to_stagingE0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingE0, params);
+% Trajectories
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.wpts_out_to_inter_to_staging, panda_sc,params);
+plotJointMotion(panda_sc, traj_40, env,params)
 
-% % Trajectories - flipped
-% paths_struct.out_to_home = flip(paths_struct.home_to_out,1);
-paths_struct.out_to_above = flip(paths_struct.above_to_out, 1);
-paths_struct.above_to_slot = flip(paths_struct.slot_to_above,1);
-paths_struct.stagingA0_to_out = flip(paths_struct.out_to_stagingA0,1);
-paths_struct.stagingB0_to_out = flip(paths_struct.out_to_stagingB0,1);
-paths_struct.stagingC0_to_out = flip(paths_struct.out_to_stagingC0,1);
-paths_struct.stagingD0_to_out = flip(paths_struct.out_to_stagingD0,1);
-paths_struct.stagingE0_to_out = flip(paths_struct.out_to_stagingE0,1);
+% % % Trajectories
+% paths_struct.home_to_out = joint_path_to_traj(paths_struct.wpts_home_to_out, params);
+% paths_struct.out_to_stagingA0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingA0, params);
+% paths_struct.out_to_stagingB0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingB0, params);
+% paths_struct.out_to_stagingC0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingC0, params);
+% paths_struct.out_to_stagingD0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingD0, params);
+% paths_struct.out_to_stagingE0 = joint_path_to_traj(paths_struct.wpts_out_to_stagingE0, params);
+% 
+% % % Trajectories - flipped
+% % paths_struct.out_to_home = flip(paths_struct.home_to_out,1);
+% paths_struct.out_to_above = flip(paths_struct.above_to_out, 1);
+% paths_struct.above_to_slot = flip(paths_struct.slot_to_above,1);
+% paths_struct.stagingA0_to_out = flip(paths_struct.out_to_stagingA0,1);
+% paths_struct.stagingB0_to_out = flip(paths_struct.out_to_stagingB0,1);
+% paths_struct.stagingC0_to_out = flip(paths_struct.out_to_stagingC0,1);
+% paths_struct.stagingD0_to_out = flip(paths_struct.out_to_stagingD0,1);
+% paths_struct.stagingE0_to_out = flip(paths_struct.out_to_stagingE0,1);
 
 %  
 

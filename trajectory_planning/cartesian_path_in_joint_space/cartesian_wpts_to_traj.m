@@ -55,7 +55,7 @@ for NumSamples = 100:100:800
     %% Conduct checks
 
     % Absolute limits of robot not exceeded
-    if ~checkTrajectory(q, q(1,:), q(end,:), params)
+    if ~checkTrajKinematics(q, q(1,:), q(end,:), params)
         disp("checkTrajectory FAIL")
         valid = false;
         continue

@@ -9,6 +9,16 @@ sphere_origin = params.sphere_origin;
 controlHz = 1000;
 dispHz = 10;
 
+
+% Handle anglesArray Nx7 or Nx9
+[num_rows, num_cols] = size(anglesArray);
+if num_cols == 7
+    anglesArray = [anglesArray, 0.01*ones(num_rows,2)];
+elseif num_cols ~= 9
+    error('Trajectory array does not have 7 or 9 columns.');
+end
+
+
 % Show panda first to get correct plot zoom
 % show(panda, anglesArray(1,:), 'Visuals','on','Collisions', 'off',  'Frames', 'off');
 
