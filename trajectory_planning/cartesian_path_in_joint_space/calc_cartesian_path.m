@@ -1,4 +1,4 @@
-function [q, wpts, valid] = calc_cartesian_path(robot_ec, robot_sc, env, jointLimits, startPose,goalPose,  q_start, params)
+function [traj, wpts, valid] = calc_cartesian_path(robot_ec, robot_sc, env, vScale, jointLimits, startPose,goalPose,  q_start, params)
 
 %% Get waypoints along cartesian path
 tvec = linspace(0,1,params.num_waypoints);
@@ -57,6 +57,7 @@ end
 
 %% Convert waypoints into trajectory
 aFactor = 0.9;
-[q, valid] = cartesian_wpts_to_traj(wpts, aFactor, robot_ec, robot_sc, env, jointLimits, params);
+[traj, valid] = cartesian_wpts_to_traj(wpts, vScale,aFactor, robot_ec, robot_sc, env, jointLimits, params);
+
 end
 

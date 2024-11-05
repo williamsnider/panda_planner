@@ -1,9 +1,9 @@
-function [traj,valid] = cartesian_wpts_to_traj(wpts, aFactor, robot_ec, robot_sc, env, jointLimits, params)
+function [traj,valid] = cartesian_wpts_to_traj(wpts, vScale, aScale, robot_ec, robot_sc, env, jointLimits, params)
 
 
 %% Calculate Trajectory - velocity and acceleration constraints
-vellim = [-params.vMaxAll', params.vMaxAll'];
-accellim = [-params.aMaxAll', params.aMaxAll']*aFactor;  % Scale further to make sure acceleration within limits
+vellim = vScale * [-params.vMaxAllAbsolute', params.vMaxAllAbsolute'];
+accellim = [-params.aMaxAll', params.aMaxAll']*aScale;  % Scale further to make sure acceleration within limits
 
 
 % Loop through different NumSamples to ensure velocity/acceleration correct

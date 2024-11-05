@@ -1,4 +1,4 @@
-function [all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(robot_ec, robot_sc,env, jointLimits, poseArray,q_start, params)
+function [all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(robot_ec, robot_sc,env, vScale, jointLimits, poseArray,q_start, params)
 
 % Check inputs
 assert(size(poseArray,1)==4);
@@ -13,7 +13,7 @@ all_valid = true;
 q_initial = q_start;
 all_wpts = [];
 for i = 1:num_paths
-    [q, wpts,valid] = calc_cartesian_path(robot_ec, robot_sc,env,jointLimits, poseArray(:,:,i),poseArray(:,:,i+1), q_initial,params);
+    [q, wpts,valid] = calc_cartesian_path(robot_ec, robot_sc,env, vScale,jointLimits, poseArray(:,:,i),poseArray(:,:,i+1), q_initial,params);
     if valid == false
         all_valid = false;
         break

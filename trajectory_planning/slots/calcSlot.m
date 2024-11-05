@@ -3,7 +3,7 @@ clear; close all;
 addpath("../..")
 params = CustomParameters();
 warning('off', 'all');
-quartet_fname = "/home/williamsnider/Code/panda_planner/trajectory_planning/quartets/trajectories/20241009_A.mat";
+quartet_fname = "/home/oconnorlabmatlab/Code/panda_planner/trajectory_planning/quartets/trajectories/20241009_A.mat";
 
 % Load variables
 [panda_ec, panda_sc] = loadPandaWithShape(params);
