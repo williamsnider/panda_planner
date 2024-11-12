@@ -1,4 +1,4 @@
-function paths_struct= calcSlotTrajectories(panda_ec, panda_sc, env, ik, q_slot, savename, stateBounds,staging_data, params)
+function paths_struct= calcSlotTrajectories(panda_ec, panda_sc, env, ik, q_slot, stateBounds,staging_data, params)
 
 %% Gather needed parameters
 ABOVE_HEIGHT = params.ABOVE_HEIGHT;
@@ -120,9 +120,10 @@ q_out = [q_out, 0.01, 0.01];
 % 
 % 
 % % Paths
+id = staging_data.staging_id;
 paths_struct.wpts_home_to_out = joint_plan_path(panda_ec, panda_sc, env, q_home, q_out, params);
 paths_struct.wpts_out_to_inter = joint_plan_path(panda_ec, panda_sc, env, q_out, staging_data.q_inter, params);
-paths_struct.wpts_out_to_inter_to_staging = [paths_struct.wpts_out_to_inter; staging_data.q_staging];
+paths_struct.("wpts_out_to_inter_to_staging"+id) = [paths_struct.wpts_out_to_inter; staging_data.q_staging];
 % paths_struct.wpts_out_to_stagingA0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingA0, params);
 % paths_struct.wpts_out_to_stagingB0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingB0, params);
 % paths_struct.wpts_out_to_stagingC0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingC0, params);
@@ -132,13 +133,13 @@ paths_struct.wpts_out_to_inter_to_staging = [paths_struct.wpts_out_to_inter; sta
 % Trajectories
 
 % Out to staging
-[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.wpts_out_to_inter_to_staging, panda_sc,params);
-paths_struct.out_to_staging_10 = traj_10;
-paths_struct.out_to_staging_40 = traj_40;
-paths_struct.out_to_staging_70 = traj_70;
-paths_struct.staging_to_out_10 = traj_10_reverse;
-paths_struct.staging_to_out_40 = traj_40_reverse;
-paths_struct.staging_to_out_70 = traj_70_reverse;
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.("wpts_out_to_inter_to_staging"+id) , panda_sc,params);
+paths_struct.("out_to_staging"+id+"_10") = traj_10;
+paths_struct.("out_to_staging"+id+"_40")  = traj_40;
+paths_struct.("out_to_staging"+id+"_70")  = traj_70;
+paths_struct.("staging"+id+"_to_out_10") = traj_10_reverse;
+paths_struct.("staging"+id+"_to_out_40") = traj_40_reverse;
+paths_struct.("staging"+id+"_to_out_70") = traj_70_reverse;
 
 % Home to out
 [traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.wpts_home_to_out, panda_sc,params);
@@ -150,8 +151,8 @@ paths_struct.out_to_home_40 = traj_40_reverse;
 paths_struct.out_to_home_70 = traj_70_reverse;
 
 
-combined = [paths_struct.home_to_out_10; paths_struct.out_to_above_10; paths_struct.above_to_slot_10;paths_struct.slot_to_above_10;paths_struct.above_to_out_10;paths_struct.out_to_staging_10;paths_struct.staging_to_out_10;paths_struct.out_to_above_10;paths_struct.above_to_slot_10;paths_struct.slot_to_above_10;paths_struct.above_to_out_10;paths_struct.out_to_home_10];
-plotJointMotion(panda_sc, combined, env,params)
+% combined = [paths_struct.home_to_out_10; paths_struct.out_to_above_10; paths_struct.above_to_slot_10;paths_struct.slot_to_above_10;paths_struct.above_to_out_10;paths_struct.out_to_staging_10;paths_struct.staging_to_out_10;paths_struct.out_to_above_10;paths_struct.above_to_slot_10;paths_struct.slot_to_above_10;paths_struct.above_to_out_10;paths_struct.out_to_home_10];
+% plotJointMotion(panda_sc, combined, env,params)
 
 % % % Trajectories
 % paths_struct.home_to_out = joint_path_to_traj(paths_struct.wpts_home_to_out, params);
