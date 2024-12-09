@@ -42,7 +42,7 @@ for OUT_DIST = 0.0:0.005:0.4
 end
 assert(sv.isStateValid(q))
 % 
-% show(panda_sc, q); hold on;
+% show(panda_sc, q, 'Collisions','on'); hold on;
 % plotJointMotion(panda_sc, q, env, params);
 
 % 
