@@ -41,6 +41,14 @@ for OUT_DIST = 0.0:0.005:0.4
     end
 end
 assert(sv.isStateValid(q))
+
+
+T_downIn = T_slot;
+T_downOut = T_out;
+T_downOut(3,4)= T_downOut(3,4) - ABOVE_HEIGHT;
+
+T_downIn_to_downOut = cat(3, T_downIn, T_downOut);
+
 % 
 % show(panda_sc, q, 'Collisions','on'); hold on;
 % plotJointMotion(panda_sc, q, env, params);
@@ -76,29 +84,50 @@ q = round(q, 10);  % Rounding ensures not exceeding joint limits by precision er
 %         continue
 %     end
 
+
+
+
 % 
 vScale = 0.1;
 [all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_array,q,params);
 assert(all_valid)
+[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q,params);
+assert(downIn_to_downOut_valid)
+all_paths{3} = downIn_to_downOut_path{1};
+all_wpts(end+1:end+9,:) = downIn_to_downOut_all_wpts;
 paths_struct = assignTraj(paths_struct, all_paths, all_wpts, vScale);
+
 
 vScale = 0.4;
 [all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_array,q,params);
 assert(all_valid)
+[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q,params);
+assert(downIn_to_downOut_valid)
+all_paths{3} = downIn_to_downOut_path{1};
+all_wpts(end+1:end+9,:) = downIn_to_downOut_all_wpts;
 paths_struct = assignTraj(paths_struct, all_paths, all_wpts, vScale);
-
 
 vScale = 0.7;
 [all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_array,q,params);
 assert(all_valid)
+[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q,params);
+assert(downIn_to_downOut_valid)
+all_paths{3} = downIn_to_downOut_path{1};
+all_wpts(end+1:end+9,:) = downIn_to_downOut_all_wpts;
 paths_struct = assignTraj(paths_struct, all_paths, all_wpts, vScale);
 
 
+
 % Ensure out joint position identical
-assert(all(paths_struct.above_to_out_10(end,:)-paths_struct.above_to_out_40(end,:)<0.00000001))
-assert(all(paths_struct.above_to_out_40(end,:)-paths_struct.above_to_out_70(end,:)<0.00000001))
-q_out = paths_struct.above_to_out_10(end,:);
-q_out = [q_out, 0.01, 0.01];
+assert(all(paths_struct.upIn_to_upOut_10(end,:)-paths_struct.upIn_to_upOut_40(end,:)<0.00000001))
+assert(all(paths_struct.upIn_to_upOut_40(end,:)-paths_struct.upIn_to_upOut_70(end,:)<0.00000001))
+q_upOut = paths_struct.upIn_to_upOut_10(end,:);
+q_upOut = [q_upOut, 0.01, 0.01];
+
+assert(all(paths_struct.downIn_to_downOut_10(end,:)-paths_struct.downIn_to_downOut_40(end,:)<0.00000001))
+assert(all(paths_struct.downIn_to_downOut_40(end,:)-paths_struct.downIn_to_downOut_70(end,:)<0.00000001))
+q_downOut = paths_struct.downIn_to_downOut_10(end,:);
+q_downOut = [q_downOut, 0.01, 0.01];
 
 %     if all_valid==true
 %         found_valid_cartesian_path = true;
@@ -121,9 +150,11 @@ q_out = [q_out, 0.01, 0.01];
 % 
 % % Paths
 id = staging_data.staging_id;
-paths_struct.wpts_home_to_out = joint_plan_path(panda_ec, panda_sc, env, q_home, q_out, params);
-paths_struct.wpts_out_to_inter = joint_plan_path(panda_ec, panda_sc, env, q_out, staging_data.q_inter, params);
-paths_struct.("wpts_out_to_inter_to_staging"+id) = [paths_struct.wpts_out_to_inter; staging_data.q_staging];
+paths_struct.wpts_home_to_upOut = joint_plan_path(panda_ec, panda_sc, env, q_home, q_upOut, params);
+paths_struct.wpts_upOut_to_inter = joint_plan_path(panda_ec, panda_sc, env, q_upOut, staging_data.q_inter, params);
+paths_struct.("wpts_upOut_to_inter_to_staging"+id) = [paths_struct.wpts_upOut_to_inter; staging_data.q_staging];
+
+paths_struct.wpts_upOut_to_downOut = joint_plan_path(panda_ec, panda_sc, env, q_upOut, q_downOut, params);
 % paths_struct.wpts_out_to_stagingA0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingA0, params);
 % paths_struct.wpts_out_to_stagingB0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingB0, params);
 % paths_struct.wpts_out_to_stagingC0 = joint_plan_path(panda_ec, panda_sc, env, q_out, params.stagingC0, params);
@@ -132,26 +163,47 @@ paths_struct.("wpts_out_to_inter_to_staging"+id) = [paths_struct.wpts_out_to_int
 
 % Trajectories
 
+% upOut to downOut
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.("wpts_upOut_to_downOut") , panda_sc,params);
+paths_struct.("upOut_to_downOut_10") = traj_10;
+paths_struct.("upOut_to_downOut_40") = traj_40;
+paths_struct.("upOut_to_downOut_70") = traj_70;
+paths_struct.("downOut_to_upOut_10") = traj_10_reverse;
+paths_struct.("downOut_to_upOut_40") = traj_40_reverse;
+paths_struct.("downOut_to_upOut_70") = traj_70_reverse;
+
+
 % Out to staging
-[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.("wpts_out_to_inter_to_staging"+id) , panda_sc,params);
-paths_struct.("out_to_staging"+id+"_10") = traj_10;
-paths_struct.("out_to_staging"+id+"_40")  = traj_40;
-paths_struct.("out_to_staging"+id+"_70")  = traj_70;
-paths_struct.("staging"+id+"_to_out_10") = traj_10_reverse;
-paths_struct.("staging"+id+"_to_out_40") = traj_40_reverse;
-paths_struct.("staging"+id+"_to_out_70") = traj_70_reverse;
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.("wpts_upOut_to_inter_to_staging"+id) , panda_sc,params);
+paths_struct.("upOut_to_staging"+id+"_10") = traj_10;
+paths_struct.("upOut_to_staging"+id+"_40")  = traj_40;
+paths_struct.("upOut_to_staging"+id+"_70")  = traj_70;
+paths_struct.("staging"+id+"_to_upOut_10") = traj_10_reverse;
+paths_struct.("staging"+id+"_to_upOut_40") = traj_40_reverse;
+paths_struct.("staging"+id+"_to_upOut_70") = traj_70_reverse;
 
-% Home to out
-[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.wpts_home_to_out, panda_sc,params);
-paths_struct.home_to_out_10 = traj_10;
-paths_struct.home_to_out_40 = traj_40;
-paths_struct.home_to_out_70 = traj_70;
-paths_struct.out_to_home_10 = traj_10_reverse;
-paths_struct.out_to_home_40 = traj_40_reverse;
-paths_struct.out_to_home_70 = traj_70_reverse;
+% Home to upOut
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.wpts_home_to_upOut, panda_sc,params);
+paths_struct.home_to_upOut_10 = traj_10;
+paths_struct.home_to_upOut_40 = traj_40;
+paths_struct.home_to_upOut_70 = traj_70;
+paths_struct.upOut_to_home_10 = traj_10_reverse;
+paths_struct.upOut_to_home_40 = traj_40_reverse;
+paths_struct.upOut_to_home_70 = traj_70_reverse;
 
 
-% combined = [paths_struct.home_to_out_10; paths_struct.out_to_above_10; paths_struct.above_to_slot_10;paths_struct.slot_to_above_10;paths_struct.above_to_out_10;paths_struct.out_to_staging_10;paths_struct.staging_to_out_10;paths_struct.out_to_above_10;paths_struct.above_to_slot_10;paths_struct.slot_to_above_10;paths_struct.above_to_out_10;paths_struct.out_to_home_10];
+combined = [paths_struct.home_to_upOut_10; 
+    paths_struct.upOut_to_downOut_10;
+    paths_struct.downOut_to_downIn_10;
+    paths_struct.downIn_to_upIn_10;
+    paths_struct.upIn_to_upOut_10;
+    paths_struct.("upOut_to_staging"+id+"_10");
+    paths_struct.("staging"+id+"_to_upOut_10");
+    paths_struct.upOut_to_upIn_10;
+    paths_struct.upIn_to_downIn_10;
+    paths_struct.downIn_to_downOut_10;
+    paths_struct.downOut_to_upOut_10;
+    paths_struct.upOut_to_home_10];
 % plotJointMotion(panda_sc, combined, env,params)
 
 % % % Trajectories

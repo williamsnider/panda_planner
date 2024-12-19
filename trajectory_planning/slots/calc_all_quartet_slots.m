@@ -21,8 +21,18 @@ quartet_slots = readcell(quartet_slots_csv);
 for i = 1:numel(quartet_slots)
     slot_name = quartet_slots{i};
 
+%     if strcmp(slot_name, "12C20") == false
+%         continue
+%     end
+
+
 
     shelf = slot_name(1:2);
+
+    if ~strcmp(shelf,'12')
+        continue
+    end
+
     if (strcmp(shelf, '00')||strcmp(shelf,"01")||strcmp(shelf,"02")||strcmp(slot_name, "05A52")||strcmp(slot_name, "06A52")||strcmp(slot_name, "06C20")||strcmp(slot_name, "08C42"))
         disp("Skipping " + slot_name)
         continue
@@ -30,10 +40,11 @@ for i = 1:numel(quartet_slots)
 
     % Skip if already exists
     if checkSubstringInFilenames(save_dir, slot_name)
-%         disp("Skipping " + slot_name + " because it already exists.")
+        disp("Skipping " + slot_name + " because it already exists.")
         continue
     end
 
+    disp(slot_name)
     calcSlot(panda_ec, panda_sc, env, ik, slot_name, slot_dir, date_prefix, save_dir, quartet_fname, params);
 end
 
