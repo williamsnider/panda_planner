@@ -18,45 +18,47 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
     urdf_ec = strcat(fileparts(mfilename('fullpath')),'/panda_description/panda_ec.urdf');
     panda_ec = importrobot(urdf_ec, 'DataFormat', 'row' );
     
-    %% Attach quartet as shape
-    cylinderLength = params.cylinderLength;
-    cylinderRadius = params.cylinderRadius;
-    cylinderSpacing = 0.075; % (linear array)
-    num_bodies = 4; % quartet
-
-     % Calculate the offset in the x-direction for each cylinder
-    yOffsets = (1:num_bodies)*cylinderSpacing;
-    yOffsets = yOffsets - (yOffsets(1) + yOffsets(end)) /2;
-    
-    for i = 1:num_bodies
-        yOffset = yOffsets(i);  % Center cylinder at 0 offset
-    
-        % Define the joint that connects the cylinder to the hand
-        joint = rigidBodyJoint(['joint_', num2str(i)], 'fixed');
-        tcp_to_base_of_stimulus = 0.0261;  % Distance between the TCP and the flat portion of each stimulus.
-        setFixedTransform(joint, trvec2tform([0, yOffset, params.hand_to_tcp + tcp_to_base_of_stimulus]));  % Offset position
-    
-        % Create the cylinder body
-        body_name = ['panda_cylinder', num2str(i)];
-%         body_names{end+1} = body_name;
-        body = rigidBody(body_name);
-        body.Joint = joint;
-    
-        %Add visual mesh to the body
-        stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
-        addVisual(body, 'Mesh', stlFileName);
-    
-
-
-        % Add collision mesh to the body
-        collisionBody = collisionCylinder(cylinderRadius, 1.5*cylinderLength);  % Since the cylinder is centered, need 2*cylinderLength
-        collisionBody.Pose(3,4) = collisionBody.Pose(3,4) + 0.5*cylinderLength/2; % full length extending, half length extending back
-        addCollision(body, collisionBody);
-    
-        % Attach to the robot tree
-        addBody(panda_sc, body, 'panda_hand');
-        addBody(panda_ec, body, 'panda_hand');
-    end
+    urdf_p = strcat(fileparts(mfilename('fullpath')),'/panda_description/panda_ec.urdf');
+    panda_p = importrobot(urdf_p, 'DataFormat', 'row');
+%     %% Attach quartet as shape
+%     cylinderLength = params.cylinderLength;
+%     cylinderRadius = params.cylinderRadius;
+%     cylinderSpacing = 0.075; % (linear array)
+%     num_bodies = 4; % quartet
+% 
+%      % Calculate the offset in the x-direction for each cylinder
+%     yOffsets = (1:num_bodies)*cylinderSpacing;
+%     yOffsets = yOffsets - (yOffsets(1) + yOffsets(end)) /2;
+%     
+%     for i = 1:num_bodies
+%         yOffset = yOffsets(i);  % Center cylinder at 0 offset
+%     
+%         % Define the joint that connects the cylinder to the hand
+%         joint = rigidBodyJoint(['joint_', num2str(i)], 'fixed');
+%         tcp_to_base_of_stimulus = 0.0261;  % Distance between the TCP and the flat portion of each stimulus.
+%         setFixedTransform(joint, trvec2tform([0, yOffset, params.hand_to_tcp + tcp_to_base_of_stimulus]));  % Offset position
+%     
+%         % Create the cylinder body
+%         body_name = ['panda_cylinder', num2str(i)];
+% %         body_names{end+1} = body_name;
+%         body = rigidBody(body_name);
+%         body.Joint = joint;
+%     
+%         %Add visual mesh to the body
+%         stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
+%         addVisual(body, 'Mesh', stlFileName);
+%     
+% 
+% 
+%         % Add collision mesh to the body
+%         collisionBody = collisionCylinder(cylinderRadius, 1.5*cylinderLength);  % Since the cylinder is centered, need 2*cylinderLength
+%         collisionBody.Pose(3,4) = collisionBody.Pose(3,4) + 0.5*cylinderLength/2; % full length extending, half length extending back
+%         addCollision(body, collisionBody);
+%     
+%         % Attach to the robot tree
+%         addBody(panda_sc, body, 'panda_hand');
+%         addBody(panda_ec, body, 'panda_hand');
+%     end
 
     %% Attach single cylinder as shape
 %     cylinderRadius = params.cylinderRadius;

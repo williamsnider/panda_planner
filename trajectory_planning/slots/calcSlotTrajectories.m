@@ -20,32 +20,47 @@ sv.Environment = env;
 %% Calculate poses for pick/place
 T_slot = getTransform(panda_sc, q_slot, "panda_hand_tcp");
 
-T_above = T_slot;
-T_above(3,4) = T_slot(3,4) + ABOVE_HEIGHT;
+T_downIn = T_slot;
+T_upIn = T_downIn;
+T_upIn(3,4) = T_upIn(3,4) + ABOVE_HEIGHT;
+
+
+% T_above = T_slot;
+% T_above(3,4) = T_slot(3,4) + ABOVE_HEIGHT;
 
 % Calculate minimum OUT_DIST to pull shape within sphere
 for OUT_DIST = 0.0:0.005:0.4
 
-    % Calculate T_out
-    T_out = T_slot;
-    T_out(1:3,4) = T_out(1:3,4) - T_out(1:3,3)*OUT_DIST;
+    % Calculate T_upOut
+    T_upOut = T_upIn;
+    T_upOut(1:3,4) = T_upOut(1:3,4) - T_upOut(1:3,3)*OUT_DIST;
+
+%     % Calculate T_out
+%     T_out = T_slot;
+%     T_out(1:3,4) = T_out(1:3,4) - T_out(1:3,3)*OUT_DIST;
 
     % Do inverse kinematics
     initialGuess = q_slot;
     weights = [1 1 1 1 1 1];
-    [q,solnInfo] = ik('panda_hand_tcp',T_out,weights,initialGuess);
+    [q_upOut,solnInfo] = ik('panda_hand_tcp',T_upOut,weights,initialGuess);
 
     % Break loop if valid (inside sphere)
-    if sv.isStateValid(q)
+    if sv.isStateValid(q_upOut)
         break
     end
 end
-assert(sv.isStateValid(q))
+assert(sv.isStateValid(q_upOut))
 
 
-T_downIn = T_slot;
-T_downOut = T_out;
+% T_downIn = T_slot;
+T_downOut = T_upOut;
 T_downOut(3,4)= T_downOut(3,4) - ABOVE_HEIGHT;
+
+
+% Check Z's 
+assert(abs(T_downOut(3,4)-T_downIn(3,4))<0.001)
+assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.001)
+
 
 T_downIn_to_downOut = cat(3, T_downIn, T_downOut);
 
@@ -71,14 +86,14 @@ T_downIn_to_downOut = cat(3, T_downIn, T_downOut);
 paths_struct = struct();
 
 % Cartesian paths for pick/place
-T_array = cat(3,T_slot, T_above, T_out);
+T_downIn_to_upIn_to_upOut = cat(3,T_downIn, T_upIn, T_upOut);
 found_valid_cartesian_path = false;
 
 % Use known q for q_slot
-q = q_slot;
+q_downIn = q_slot;
 
 %Redo inverse kinematics if q is outside joint limits or in collision
-q = round(q, 10);  % Rounding ensures not exceeding joint limits by precision error
+q_downIn = round(q_downIn, 10);  % Rounding ensures not exceeding joint limits by precision error
 
 %     if ~custom_check_valid_state(panda_ec, panda_sc, env, q, stateBounds)
 %         continue
@@ -89,9 +104,9 @@ q = round(q, 10);  % Rounding ensures not exceeding joint limits by precision er
 
 % 
 vScale = 0.1;
-[all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_array,q,params);
+[all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_upIn_to_upOut,q_downIn,params);
 assert(all_valid)
-[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q,params);
+[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q_downIn,params);
 assert(downIn_to_downOut_valid)
 all_paths{3} = downIn_to_downOut_path{1};
 all_wpts(end+1:end+9,:) = downIn_to_downOut_all_wpts;
@@ -99,18 +114,18 @@ paths_struct = assignTraj(paths_struct, all_paths, all_wpts, vScale);
 
 
 vScale = 0.4;
-[all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_array,q,params);
+[all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_upIn_to_upOut,q_downIn,params);
 assert(all_valid)
-[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q,params);
+[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q_downIn,params);
 assert(downIn_to_downOut_valid)
 all_paths{3} = downIn_to_downOut_path{1};
 all_wpts(end+1:end+9,:) = downIn_to_downOut_all_wpts;
 paths_struct = assignTraj(paths_struct, all_paths, all_wpts, vScale);
 
 vScale = 0.7;
-[all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_array,q,params);
+[all_paths, all_valid, all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_upIn_to_upOut,q_downIn,params);
 assert(all_valid)
-[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q,params);
+[downIn_to_downOut_path, downIn_to_downOut_valid, downIn_to_downOut_all_wpts] = calc_sequence_cartesian_paths(panda_ec, panda_sc, env, vScale,stateBounds, T_downIn_to_downOut,q_downIn,params);
 assert(downIn_to_downOut_valid)
 all_paths{3} = downIn_to_downOut_path{1};
 all_wpts(end+1:end+9,:) = downIn_to_downOut_all_wpts;
@@ -124,10 +139,42 @@ assert(all(paths_struct.upIn_to_upOut_40(end,:)-paths_struct.upIn_to_upOut_70(en
 q_upOut = paths_struct.upIn_to_upOut_10(end,:);
 q_upOut = [q_upOut, 0.01, 0.01];
 
+assert(all(paths_struct.upIn_to_upOut_10(1,:)-paths_struct.upIn_to_upOut_40(1,:)<0.00000001))
+assert(all(paths_struct.upIn_to_upOut_40(1,:)-paths_struct.upIn_to_upOut_70(1,:)<0.00000001))
+q_upIn = paths_struct.upIn_to_downIn_10(1,:);
+q_upIn = [q_upIn, 0.01, 0.01];
+
 assert(all(paths_struct.downIn_to_downOut_10(end,:)-paths_struct.downIn_to_downOut_40(end,:)<0.00000001))
 assert(all(paths_struct.downIn_to_downOut_40(end,:)-paths_struct.downIn_to_downOut_70(end,:)<0.00000001))
 q_downOut = paths_struct.downIn_to_downOut_10(end,:);
 q_downOut = [q_downOut, 0.01, 0.01];
+
+assert(all(paths_struct.downIn_to_downOut_10(1,:)-paths_struct.downIn_to_downOut_40(1,:)<0.00000001))
+assert(all(paths_struct.downIn_to_downOut_40(1,:)-paths_struct.downIn_to_downOut_70(1,:)<0.00000001))
+
+
+% Sanity Check that given q transforms to requested T
+given_q = q_downIn;
+requested_T = T_downIn;
+T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
+assert(sum(sum((T_calc-requested_T).^2))<0.001)
+
+given_q = q_upIn;
+requested_T = T_upIn;
+T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
+assert(sum(sum((T_calc-requested_T).^2))<0.001)
+
+given_q = q_upOut;
+requested_T = T_upOut;
+T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
+assert(sum(sum((T_calc-requested_T).^2))<0.001)
+
+given_q = q_downOut;
+requested_T = T_downOut;
+T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
+assert(sum(sum((T_calc-requested_T).^2))<0.001)
+
+
 
 %     if all_valid==true
 %         found_valid_cartesian_path = true;

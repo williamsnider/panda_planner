@@ -2,6 +2,9 @@
 *.asv
 shelf_design/safety_sweep*
 
+*.png
+*.stl
+
 planned_paths/*/*.csv
 planned_paths/panel_06B/*.mat
 planned_paths/safety_sweep/temp/*.mat

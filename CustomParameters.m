@@ -177,8 +177,8 @@ staging_box_center = [-0.52, -0.05, 0.5]; % Replace with the desired center coor
   % (sphere cutoff + 2 cylinders);
   obj.cylinder_height = 0.25;
   obj.cylinder_buffer = 0.00;
-  obj.sphere_cutoff_bottom = Z_list(1); % Switch to bottom cylinder for state space validator
-  obj.sphere_cutoff_top = Z_list(end); % Switch to top cylinder for state space validator
+  obj.sphere_cutoff_bottom = Z_list(1); % Switch to bottom cylinder for state space validator. Assume this is center of cylinder
+  obj.sphere_cutoff_top = Z_list(end); % Switch to top cylinder for state space validator. Assume this is center of cylinder
   obj.bottom_cylinder_radius = obj.radius_list(1) - obj.cylinder_buffer; % Shelf_00 radius
   obj.top_cylinder_radius = obj.radius_list(end)- obj.sphere_buffer; % Larger buffer for top since there's more room (no pedestal)
 
