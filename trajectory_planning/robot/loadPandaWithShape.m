@@ -19,7 +19,7 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
     panda_ec = importrobot(urdf_ec, 'DataFormat', 'row' );
     
     urdf_p = strcat(fileparts(mfilename('fullpath')),'/panda_description/panda_ec.urdf');
-    panda_p = importrobot(urdf_p, 'DataFormat', 'row');
+    panda_p = importrobot(urdf_p);
 %     %% Attach quartet as shape
 %     cylinderLength = params.cylinderLength;
 %     cylinderRadius = params.cylinderRadius;
