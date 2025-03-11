@@ -52,7 +52,7 @@ function fv = load_uniform_zone_mesh(params_MATLAB)
             error('Mesh parameters do not match! STL import aborted.');
         else
             % Load STL if parameters match
-            fv = stlread('combined_mesh.stl');
+            fv = stlread('uniform_zone_mesh.stl');
 %             faces = fv.ConnectivityList;
 %             vertices = fv.Points;
 %             patch('Faces', faces, 'Vertices', vertices, 'FaceColor', 'cyan', "EdgeColor",'none','FaceAlpha',0.25);

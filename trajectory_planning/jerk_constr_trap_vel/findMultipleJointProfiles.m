@@ -19,6 +19,7 @@ for i = 1:numJoints
     vMax = params.vMaxAll(i);
     aMax = params.aMaxAll(i);
     jMax = params.jMaxAll(i);
+    disp(jMax)
     [accelRiseTime,accelConstTime,accelZeroTime,~] = findOptimalProfile(s1,s0,jMax, aMax, vMax);
     totalTime = 2*accelRiseTime + accelConstTime + accelZeroTime;
     minTimes(i) = totalTime;
@@ -61,11 +62,14 @@ for i = 1:numJoints
     ppV = fnint(ppA);
     ppX = fnint(ppV, s0);  % Add in starting value for position
 %     plotProfiles(ppX, ppV, ppA, ppJ, vMax, aMax, jMax)
-    
+%     waitforbuttonpress()
+
     allJointTrajectories(i,:) = ppval(ppX,timesteps); % Note T = time to cover HALF of distance (symmetric)
 end
 
 % Pad beginning/ending to ensure velocity, acceleration, jerk = 0
 allJointTrajectories = [repmat(allJointTrajectories(:,1), 1, 3), allJointTrajectories, repmat(allJointTrajectories(:,end), 1, 3)];
+% plot_derivatives(allJointTrajectories(1:7,:)', params)
+% waitforbuttonpress()
 end
 

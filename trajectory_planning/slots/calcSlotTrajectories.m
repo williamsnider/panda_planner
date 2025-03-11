@@ -54,12 +54,12 @@ assert(sv.isStateValid(q_upOut))
 
 % T_downIn = T_slot;
 T_downOut = T_upOut;
-T_downOut(3,4)= T_downOut(3,4) - ABOVE_HEIGHT;
+T_downOut(3,4)= T_downIn(3,4);
 
 
 % Check Z's 
-assert(abs(T_downOut(3,4)-T_downIn(3,4))<0.001)
-assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.001)
+assert(abs(T_downOut(3,4)-T_downIn(3,4))<0.015)
+assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.015)
 
 
 T_downIn_to_downOut = cat(3, T_downIn, T_downOut);

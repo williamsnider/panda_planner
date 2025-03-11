@@ -48,7 +48,7 @@ valid_slots = {};
 %     valid_slots{end+1} = slot_name;
 % end
 
-valid_slots{end+1} = "06A36";
+valid_slots{end+1} = "06C08";
 
 % Parallel execution
 for i = 1:numel(valid_slots)

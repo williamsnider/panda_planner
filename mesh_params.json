@@ -1,0 +1,21 @@
+{
+    "sphere_radius": 0.7703,
+    "sphere_origin": [
+        0,
+        0,
+        0.3419
+    ],
+    "sphere_cutoff_top": 0.9832,
+    "sphere_cutoff_bottom": -0.2339,
+    "cylinder_height": 0.25,
+    "bottom_cylinder_radius": 0.631,
+    "top_cylinder_radius": 0.4537,
+    "staging_box_width": 0.37,
+    "staging_box_height": 1.2,
+    "staging_box_length": 0.85,
+    "staging_box_center": [
+        -0.52,
+        -0.05,
+        0.5
+    ]
+}
