@@ -19,7 +19,6 @@ for i = 1:numJoints
     vMax = params.vMaxAll(i);
     aMax = params.aMaxAll(i);
     jMax = params.jMaxAll(i);
-    disp(jMax)
     [accelRiseTime,accelConstTime,accelZeroTime,~] = findOptimalProfile(s1,s0,jMax, aMax, vMax);
     totalTime = 2*accelRiseTime + accelConstTime + accelZeroTime;
     minTimes(i) = totalTime;

@@ -23,32 +23,32 @@ end
 quartet_slots = readcell(quartet_slots_csv);
 valid_slots = {};
 
-% % Pre-filter slots before parallel execution
-% for i = 1:numel(quartet_slots)
-%     slot_name = quartet_slots{i};
-%     shelf = slot_name(1:2);
-% 
-%     if ~strcmp(shelf, '12')
-%         continue
-%     end
-% 
+% Pre-filter slots before parallel execution
+for i = 1:numel(quartet_slots)
+    slot_name = quartet_slots{i};
+    shelf = slot_name(1:2);
+
+    if ~strcmp(shelf, '00')
+        continue
+    end
+
 %     if (strcmp(shelf, '00') || strcmp(shelf, "01") || strcmp(shelf, "02") || ...
 %         strcmp(slot_name, "05A52") || strcmp(slot_name, "06A52") || ...
 %         strcmp(slot_name, "06C20") || strcmp(slot_name, "08C42"))
 %         disp("Skipping " + slot_name)
 %         continue
 %     end
-% 
-%     % Skip if already exists
-%     if checkSubstringInFilenames(save_dir, slot_name)
-%         disp("Skipping " + slot_name + " because it already exists.")
-%         continue
-%     end
-% 
-%     valid_slots{end+1} = slot_name;
-% end
 
-valid_slots{end+1} = "06C08";
+    % Skip if already exists
+    if checkSubstringInFilenames(save_dir, slot_name)
+        disp("Skipping " + slot_name + " because it already exists.")
+        continue
+    end
+
+    valid_slots{end+1} = slot_name;
+end
+
+% valid_slots{end+1} = "06C08";
 
 % Parallel execution
 for i = 1:numel(valid_slots)

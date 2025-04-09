@@ -45,8 +45,6 @@ function [panda_ec, panda_sc] = loadPandaWithShape(params)
         %Add visual mesh to the body
         stlFileName = strcat(params.CustomParametersDir,'/trajectory_planning/robot/panda_description/cylinder',num2str(i),'.stl');
         addVisual(body, 'Mesh', stlFileName);
-    
-
 
         % Add collision mesh to the body
         collisionBody = collisionCylinder(cylinderRadius, 1.5*cylinderLength);  % Since the cylinder is centered, need 2*cylinderLength

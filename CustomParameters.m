@@ -38,9 +38,10 @@ classdef CustomParameters
  q_home = [-0.0121707, -0.561084, 0.00127942, -2.60702, -0.0211893, 2.03285, 0.802306, 0.01, 0.01];
  
  
- % Model held shapes as cylinders
+ % Model held shapes as cylinders - need to run construct_cylinder_stl.m to
+ % update values if changed here.
  cylinderRadius = 0.0225;  
- cylinderLength = 0.125; 
+ cylinderLength = 0.10; % Actual limit is 0.08, but safety margin
  %
  %  monkeyXYZ = [-0.62 -0.0 0.40]; % from Neo's perspective +X: towards far wall, +Y: towards left, +Z: towards ceiling
  %  pullXYZ = [-0.62 -0.125 0.40];

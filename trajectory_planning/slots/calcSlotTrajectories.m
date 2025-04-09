@@ -48,6 +48,9 @@ for OUT_DIST = 0.0:0.005:0.4
     if sv.isStateValid(q_upOut)
         break
     end
+
+    plotJointMotion(panda_sc, q_upOut, env, params)
+    disp('here')
 end
 assert(sv.isStateValid(q_upOut))
 
