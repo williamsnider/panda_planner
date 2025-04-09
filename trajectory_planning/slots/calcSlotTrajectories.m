@@ -49,8 +49,10 @@ for OUT_DIST = 0.0:0.005:0.4
         break
     end
 
-    plotJointMotion(panda_sc, q_upOut, env, params)
-    disp('here')
+    if  OUT_DIST == 0.2
+        plotJointMotion(panda_sc, q_upOut, env, params)
+        disp('here')
+    end
 end
 assert(sv.isStateValid(q_upOut))
 
