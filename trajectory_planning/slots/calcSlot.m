@@ -21,7 +21,11 @@ staging_data.cell_staging_to_inter_path = A.cell_staging_to_inter_path{idx};
 
 % Calculate trajectories relevant to each slot; store in paths_struct
 stateBounds = manipulatorStateSpace(panda_ec).StateBounds'; % for joint limits
-paths_struct = calcSlotTrajectories(panda_ec, panda_sc, env, ik, q_slot, stateBounds, staging_data, params);
+if strcmp(slot_name(1:2), "00")
+    paths_struct = calcSlotTrajectoriesBottomShelf(panda_ec, panda_sc, env, ik, q_slot, stateBounds, staging_data, params);
+else
+    paths_struct = calcSlotTrajectories(panda_ec, panda_sc, env, ik, q_slot, stateBounds, staging_data, params);
+end
 
 % Write paths_struct fields to csv
 traj_name_list = fieldnames(paths_struct);

@@ -5,9 +5,9 @@ function planned_path = joint_plan_path(robot_ec, robot_sc, env, start, goal, pa
 sv = construct_state_validator(robot_ec, robot_sc, env, params);
 
 % Test start and goal position
-assert(sv.isStateValid(start), "Starting joint position is invalid, probably outside the spherical region.")
+assert(sv.isStateValid(start), "Starting joint position is invalid, probably outside the ellipsoidal region.")
 % plotJointMotion(robot_sc, start, env, params)
-assert(sv.isStateValid(goal), "Goal joint position is invalid, probably outside the spherical region.")
+assert(sv.isStateValid(goal), "Goal joint position is invalid, probably outside the ellipsoidal region.")
 % plotJointMotion(robot_sc, goal, env, params)
 
 
@@ -16,7 +16,7 @@ assert(sv.isStateValid(goal), "Goal joint position is invalid, probably outside 
 
 %% Plan path using RRT
 if IsDirectValid == false
-    rrt = manipulatorRRTSphere(robot_ec, robot_sc, env, params);
+    rrt = manipulatorRRTEllipsoid(robot_ec, robot_sc, env, params);
     rrt.SkippedSelfCollisions = "parent";
     planned_path = plan(rrt,start,goal);
 

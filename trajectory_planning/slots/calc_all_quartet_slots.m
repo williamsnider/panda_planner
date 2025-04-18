@@ -13,7 +13,7 @@ ik.SolverParameters.MaxIterations = 1000;
 quartet_fname = params.CustomParametersDir+"/trajectory_planning/quartets/trajectories/20241009_A.mat";
 save_dir = params.CustomParametersDir+"/trajectory_planning/slots/trajectories/";
 quartet_slots_csv = params.CustomParametersDir+"/trajectory_planning/slots/quartet_slots.csv";
-date_prefix = "20241009_";
+date_prefix = "20250418_";
 slot_dir = "20241112_manual_slots";
 
 if ~exist(save_dir, 'dir')
@@ -28,16 +28,15 @@ for i = 1:numel(quartet_slots)
     slot_name = quartet_slots{i};
     shelf = slot_name(1:2);
 
-    if ~strcmp(shelf, '00')
+
+
+
+    if strcmp(slot_name, "06C20") || ... % Joint limit reached
+            strcmp(slot_name, "04C32") || ... % Joint limit reached
+            strcmp(slot_name, "08C42")  % Cartesian calculation fails
+        disp("Skipping " + slot_name)
         continue
     end
-
-%     if (strcmp(shelf, '00') || strcmp(shelf, "01") || strcmp(shelf, "02") || ...
-%         strcmp(slot_name, "05A52") || strcmp(slot_name, "06A52") || ...
-%         strcmp(slot_name, "06C20") || strcmp(slot_name, "08C42"))
-%         disp("Skipping " + slot_name)
-%         continue
-%     end
 
     % Skip if already exists
     if checkSubstringInFilenames(save_dir, slot_name)
@@ -48,7 +47,6 @@ for i = 1:numel(quartet_slots)
     valid_slots{end+1} = slot_name;
 end
 
-% valid_slots{end+1} = "06C08";
 
 % Parallel execution
 for i = 1:numel(valid_slots)

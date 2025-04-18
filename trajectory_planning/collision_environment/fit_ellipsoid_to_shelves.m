@@ -32,12 +32,6 @@ for i = 1:numel(valid_list)
     end
 end
 
-fun = @(x) ellipsoid_cost(x, adjusted_pts);
-% Initial guess: [a, b, c, z0] -> axis lengths and center z
-x0 = [0.5, 0.5, 0.5, 0.5];
-optimal_x = fminsearch(fun, x0);
-optimal_radii = optimal_x(1:3);
-optimal_center_Z = optimal_x(4);
 
 Z_list = [];
 for i =0:12
@@ -62,12 +56,43 @@ end
 nn_D = D(:,2);
 assert(all(nn_D >= 0.03), "Some slots are too close to their neighbors.")
 
+
+% Omit bottom shelf points for ellipsoid, since bottom cylinder controls
+% this
+adjusted_pts_sans_shelf_0 = adjusted_pts;
+z_threshold = mean(Z_list(1:2));  % Average between 0th and 1st shelves
+adjusted_pts_sans_shelf_0(adjusted_pts_sans_shelf_0(:,3) < z_threshold, :) = [];
+
+fun = @(x) ellipsoid_cost(x, adjusted_pts_sans_shelf_0);
+% Initial guess: [a, b, c, z0] -> axis lengths and center z
+x0 = [0.80, 0.92, 0.27];
+optimal_x = fminsearch(fun, x0);
+optimal_radii = [optimal_x(1), optimal_x(1), optimal_x(2)];
+optimal_center_Z = optimal_x(3);
+
+
 end
 
 function cost = ellipsoid_cost(x, pts)
-    a = x(1); b = x(2); c = x(3); z0 = x(4);
+    a = x(1); b = x(1); c = x(2); z0 = x(3);  % Clamp x and y radius to be the same
     pts_shifted = [pts(:,1), pts(:,2), pts(:,3) - z0];
+
     norm_vals = (pts_shifted(:,1)/a).^2 + (pts_shifted(:,2)/b).^2 + (pts_shifted(:,3)/c).^2;
-    inside = norm_vals < 1;
-    cost = sum(inside) - mean([a, b, c]);
+    outside = norm_vals > 1;
+
+    volume = 4/3 * pi * a*b*c;
+
+    % Penalize negative radii
+    penalty = 0;
+    if a<0
+        penalty = penalty + -a;
+    end
+    if b<0
+        penalty = penalty + -b;
+    end
+    if c<0
+        penalty = penalty + -c;
+    end
+    cost = -abs(volume) + -sum(outside) + penalty;
+
 end

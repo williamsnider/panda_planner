@@ -32,7 +32,7 @@ classdef CustomParameters
  checkSteps = 100  % ms; every 250ms is checked by motionCheck for environmental collisions
  checkProportion = 0.05 % Proportion of states that are double checked for kinematic constraints and self/environment collisiosn
  smoothing_window_size = 100 % Smooths out joint-to-joint motions
-    multiMovementPadding = 50  % For a trajectory with multiple steps, pad the start/end of each step by this amount to smooth the transitions
+ multiMovementPadding = 50  % For a trajectory with multiple steps, pad the start/end of each step by this amount to smooth the transitions
  
     % Joint positions
  q_home = [-0.0121707, -0.561084, 0.00127942, -2.60702, -0.0211893, 2.03285, 0.802306, 0.01, 0.01];
@@ -74,12 +74,14 @@ staging_box_center = [-0.52, -0.05, 0.5]; % Replace with the desired center coor
 
  Z_list
  radius_list
- sphere_radius
- radius_offset
- sphere_buffer
- sphere_origin
- sphere_cutoff_bottom
- sphere_cutoff_top
+ ellipsoid_buffer
+ ellipsoid_r1
+ ellipsoid_r2
+ ellipsoid_r3
+ ellipsoid_origin
+ ellipsoid_radius_offset
+ ellipsoid_cutoff_bottom
+ ellipsoid_cutoff_top
  cylinder_height
  cylinder_buffer
  bottom_cylinder_radius
@@ -165,23 +167,33 @@ staging_box_center = [-0.52, -0.05, 0.5]; % Replace with the desired center coor
   obj.slots_for_sphere_dir = obj.CustomParametersDir + "/trajectory_planning/collision_environment/slots_for_sphere";
   assert(exist(obj.slots_for_sphere_dir)==7, "obj.slots_for_sphere_dir does not exist")
   disp(obj.slots_for_sphere_dir)
-  [sphere_radius, sphere_origin_Z, Z_list, radius_list, adjusted_pts] = fit_sphere_to_shelves(obj); % Omit shelf_00 and shelf_12/shelf_12 since the cylinders cover them
+%   [sphere_radius, sphere_origin_Z, Z_list, radius_list, adjusted_pts] = fit_sphere_to_shelves(obj); % Omit shelf_00 and shelf_12/shelf_12 since the cylinders cover them
+  
+
+  [optimal_radii, optimal_center_Z, Z_list, radius_list, adjusted_pts] = fit_ellipsoid_to_shelves(obj); % Does not use buffer.
   obj.radius_list = radius_list;
   obj.Z_list = Z_list;
   obj.shelf_pts = adjusted_pts;
-  obj.sphere_buffer = 0.025;
-  obj.sphere_radius = sphere_radius - obj.sphere_buffer; % introduce safety margin
-  obj.sphere_origin = [0,0,sphere_origin_Z];
-  obj.radius_offset = 0.005;  % Make path planning 0.005m more conservative, but do not use this with motioncheck.
+  obj.ellipsoid_buffer = 0.025; %0.025;  % Buffer to subtract from ellipsoid radii; rendered in plotJointMotion.
+  obj.ellipsoid_r1 = optimal_radii(1) - obj.ellipsoid_buffer;
+  obj.ellipsoid_r2 = optimal_radii(2)- obj.ellipsoid_buffer;
+  obj.ellipsoid_r3 = optimal_radii(3)- obj.ellipsoid_buffer;
+  obj.ellipsoid_origin = [0,0,optimal_center_Z];
+  obj.ellipsoid_radius_offset = 0.005; % Make path planning 0.005m more conservative, but do not use this with motioncheck. This additional buffer is not present in plotJointMotion.
+
+%   obj.sphere_buffer = 0.025;
+%   obj.sphere_radius = sphere_radius - obj.sphere_buffer; % introduce safety margin
+%   obj.sphere_origin = [0,0,sphere_origin_Z];
+%   obj.radius_offset = 0.005;  % Make path planning 0.005m more conservative, but do not use this with motioncheck.
 
   % Add cylinder on top/bottom to improve collision checking
   % (sphere cutoff + 2 cylinders);
   obj.cylinder_height = 0.25;
   obj.cylinder_buffer = 0.00;
-  obj.sphere_cutoff_bottom = Z_list(1); % Switch to bottom cylinder for state space validator. Assume this is center of cylinder
-  obj.sphere_cutoff_top = Z_list(end); % Switch to top cylinder for state space validator. Assume this is center of cylinder
+  obj.ellipsoid_cutoff_bottom = Z_list(1); % Switch to bottom cylinder for state space validator. Assume this is center of cylinder
+  obj.ellipsoid_cutoff_top = Z_list(end); % Switch to top cylinder for state space validator. Assume this is center of cylinder
   obj.bottom_cylinder_radius = obj.radius_list(1) - obj.cylinder_buffer; % Shelf_00 radius
-  obj.top_cylinder_radius = obj.radius_list(end)- obj.sphere_buffer; % Larger buffer for top since there's more room (no pedestal)
+  obj.top_cylinder_radius = obj.radius_list(end)- obj.ellipsoid_buffer; % Larger buffer for top since there's more room (no pedestal)
 
  end
 

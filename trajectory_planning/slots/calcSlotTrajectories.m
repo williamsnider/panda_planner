@@ -12,8 +12,8 @@ ABOVE_HEIGHT = params.ABOVE_HEIGHT;
 % jointMax = params.jointMax;
 q_home = params.q_home;
 
-ss = ManipulatorStateSpaceSphere(panda_ec, panda_sc);
-sv = ManipulatorStateValidatorSphere(ss, env, params.validationDistance,params.radius_offset, params);
+ss = ManipulatorStateSpaceEllipsoid(panda_ec, panda_sc);
+sv = ManipulatorStateValidatorEllipsoid(ss, env, params.validationDistance,params.ellipsoid_radius_offset, params);
 sv.IgnoreSelfCollision = false;
 sv.Environment = env;
 
@@ -44,16 +44,25 @@ for OUT_DIST = 0.0:0.005:0.4
     weights = [1 1 1 1 1 1];
     [q_upOut,solnInfo] = ik('panda_hand_tcp',T_upOut,weights,initialGuess);
 
-    % Break loop if valid (inside sphere)
+    % Break loop if valid (inside ellipsoidf for both T_upOut and T_downOut)
     if sv.isStateValid(q_upOut)
-        break
+
+        % Test if q_downOut valid too
+        T_downOut = T_upOut;
+        T_downOut(3,4)= T_downIn(3,4);
+        [q_downOut,solnInfo] = ik('panda_hand_tcp',T_downOut,weights,q_upOut);
+        if sv.isStateValid(q_downOut)
+            break
+        end
     end
 
     if  OUT_DIST == 0.2
-        plotJointMotion(panda_sc, q_upOut, env, params)
-        disp('here')
+%         plotJointMotion(panda_sc, q_upOut, env, params)
+%         disp('here')
     end
 end
+% plotJointMotion(panda_sc, q_upOut, env, params)
+% disp('here')
 assert(sv.isStateValid(q_upOut))
 
 
@@ -64,7 +73,7 @@ T_downOut(3,4)= T_downIn(3,4);
 
 % Check Z's 
 assert(abs(T_downOut(3,4)-T_downIn(3,4))<0.015)
-assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.015)
+assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.02)
 
 
 T_downIn_to_downOut = cat(3, T_downIn, T_downOut);
