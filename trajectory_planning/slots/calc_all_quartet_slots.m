@@ -33,7 +33,9 @@ for i = 1:numel(quartet_slots)
 
     if strcmp(slot_name, "06C20") || ... % Joint limit reached
             strcmp(slot_name, "04C32") || ... % Joint limit reached
-            strcmp(slot_name, "08C42")  % Cartesian calculation fails
+            strcmp(slot_name, "05C32") || ... % Joint limit reached
+            strcmp(slot_name, "08C42")||...  % Cartesian calculation fails
+            strcmp(slot_name, "09A30")  % Cartesian calculation fails
         disp("Skipping " + slot_name)
         continue
     end
