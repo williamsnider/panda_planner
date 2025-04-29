@@ -78,23 +78,7 @@ assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.02)
 
 T_downIn_to_downOut = cat(3, T_downIn, T_downOut);
 
-% 
-% show(panda_sc, q, 'Collisions','on'); hold on;
-% plotJointMotion(panda_sc, q, env, params);
 
-% 
-% % Plot robot positions
-% T_cell = {T_slot, T_above, T_out};
-% initialGuess = q_home;
-% for T_idx = 1:numel(T_cell)
-% 
-%     T = T_cell{T_idx};
-%     [q,solnInfo] = ik('panda_custom_shape', T, weights, initialGuess);
-%     assert(strcmp(solnInfo.Status, "success"))
-%     initialGuess = q;
-% 
-%     show(panda_sc, q); hold on;
-% end
 
 %% Calculate trajectories
 paths_struct = struct();
@@ -109,10 +93,18 @@ q_downIn = q_slot;
 %Redo inverse kinematics if q is outside joint limits or in collision
 q_downIn = round(q_downIn, 10);  % Rounding ensures not exceeding joint limits by precision error
 
-%     if ~custom_check_valid_state(panda_ec, panda_sc, env, q, stateBounds)
-%         continue
-%     end
 
+
+% Calculate T_pivot and q_pivot
+dist_hori = 0.004;
+dist_vert = 0.0015;
+T_pivot = T_slot;
+T_pivot(1:3,4) = T_pivot(1:3,4) + T_pivot(1:3,3)*dist_hori;
+T_pivot(1:3,4) = T_pivot(1:3,4) - T_pivot(1:3,1)*dist_vert;% Negative since sign is flipped for this vector
+initialGuess = q_downIn;
+weights = [1 1 1 1 1 1];
+[q_pivot,solnInfo] = ik('panda_hand_tcp',T_pivot,weights,initialGuess);
+assert(strcmp(solnInfo.Status,'success'))
 
 
 
@@ -188,6 +180,11 @@ requested_T = T_downOut;
 T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
 assert(sum(sum((T_calc-requested_T).^2))<0.001)
 
+given_q = q_pivot;
+requested_T = T_pivot;
+T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
+assert(sum(sum((T_calc-requested_T).^2))<0.001)
+
 
 
 %     if all_valid==true
@@ -253,9 +250,24 @@ paths_struct.upOut_to_home_40 = traj_40_reverse;
 paths_struct.upOut_to_home_70 = traj_70_reverse;
 
 
+% downIn to pivot - attempt direct motion in joint space
+assert(~is_robot_in_self_collision_ignore_pairs(panda_sc, q_downIn));
+assert(~is_robot_in_self_collision_ignore_pairs(panda_sc, (q_downIn+q_pivot)/2));
+assert(~is_robot_in_self_collision_ignore_pairs(panda_sc, q_pivot));
+paths_struct.wpts_downIn_to_pivot = [q_downIn; q_pivot]; % Direct motion;
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.("wpts_downIn_to_pivot") , panda_sc,params);
+paths_struct.("downIn_to_pivot_10") = traj_10;
+paths_struct.("downIn_to_pivot_40") = traj_40;
+paths_struct.("downIn_to_pivot_70") = traj_70;
+paths_struct.("pivot_to_downIn_10") = traj_10_reverse;
+paths_struct.("pivot_to_downIn_40") = traj_40_reverse;
+paths_struct.("pivot_to_downIn_70") = traj_70_reverse;
+
 combined = [paths_struct.home_to_upOut_10; 
     paths_struct.upOut_to_downOut_10;
     paths_struct.downOut_to_downIn_10;
+    paths_struct.downIn_to_pivot_10;
+    paths_struct.pivot_to_downIn_10;
     paths_struct.downIn_to_upIn_10;
     paths_struct.upIn_to_upOut_10;
     paths_struct.("upOut_to_staging"+id+"_10");
@@ -266,6 +278,21 @@ combined = [paths_struct.home_to_upOut_10;
     paths_struct.downOut_to_upOut_10;
     paths_struct.upOut_to_home_10];
 % plotJointMotion(panda_sc, combined, env,params)
+
+paths_array = {paths_struct.home_to_upOut_10; 
+    paths_struct.upOut_to_downOut_10;
+    paths_struct.downOut_to_downIn_10;
+    paths_struct.downIn_to_upIn_10;
+    paths_struct.downIn_to_pivot_10;
+    paths_struct.pivot_to_downIn_10;
+    paths_struct.upIn_to_upOut_10;
+    paths_struct.("upOut_to_staging"+id+"_10");
+    paths_struct.("staging"+id+"_to_upOut_10");
+    paths_struct.upOut_to_upIn_10;
+    paths_struct.upIn_to_downIn_10;
+    paths_struct.downIn_to_downOut_10;
+    paths_struct.downOut_to_upOut_10;
+    paths_struct.upOut_to_home_10};
 
 % % % Trajectories
 % paths_struct.home_to_out = joint_path_to_traj(paths_struct.wpts_home_to_out, params);

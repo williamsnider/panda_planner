@@ -137,10 +137,16 @@ q_downIn = q_slot;
 %Redo inverse kinematics if q is outside joint limits or in collision
 q_downIn = round(q_downIn, 10);  % Rounding ensures not exceeding joint limits by precision error
 
-%     if ~custom_check_valid_state(panda_ec, panda_sc, env, q, stateBounds)
-%         continue
-%     end
-
+% Calculate T_pivot and q_pivot
+dist_hori = 0.004;
+dist_vert = 0.0015;
+T_pivot = T_slot;
+T_pivot(1:3,4) = T_pivot(1:3,4) + T_pivot(1:3,3)*dist_hori;
+T_pivot(1:3,4) = T_pivot(1:3,4) - T_pivot(1:3,1)*dist_vert;
+initialGuess = q_downIn;
+weights = [1 1 1 1 1 1];
+[q_pivot,solnInfo] = ik('panda_hand_tcp',T_pivot,weights,initialGuess);
+assert(strcmp(solnInfo.Status,'success'))
 
 
 % For the bottom shelf, simplying pulling from upIn to upOut does not give
@@ -275,6 +281,12 @@ T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
 assert(sum(sum((T_calc-requested_T).^2))<0.001)
 
 
+given_q = q_pivot;
+requested_T = T_pivot;
+T_calc = getTransform(panda_sc, given_q, 'panda_hand_tcp');
+assert(sum(sum((T_calc-requested_T).^2))<0.001)
+
+
 %     if all_valid==true
 %         found_valid_cartesian_path = true;
 %         combined = [all_paths{1}; all_paths{2}];
@@ -351,10 +363,24 @@ paths_struct.("downOut_to_upOut_10") = traj_10_reverse;
 paths_struct.("downOut_to_upOut_40") = traj_40_reverse;
 paths_struct.("downOut_to_upOut_70") = traj_70_reverse;
 
+% downIn to pivot - attempt direct motion in joint space
+assert(~is_robot_in_self_collision_ignore_pairs(panda_sc, q_downIn));
+assert(~is_robot_in_self_collision_ignore_pairs(panda_sc, (q_downIn+q_pivot)/2));
+assert(~is_robot_in_self_collision_ignore_pairs(panda_sc, q_pivot));
+paths_struct.wpts_downIn_to_pivot = [q_downIn; q_pivot]; % Direct motion;
+[traj_10, traj_10_reverse, traj_40, traj_40_reverse, traj_70, traj_70_reverse] = planned_path_to_traj_10_40_70(paths_struct.("wpts_downIn_to_pivot") , panda_sc,params);
+paths_struct.("downIn_to_pivot_10") = traj_10;
+paths_struct.("downIn_to_pivot_40") = traj_40;
+paths_struct.("downIn_to_pivot_70") = traj_70;
+paths_struct.("pivot_to_downIn_10") = traj_10_reverse;
+paths_struct.("pivot_to_downIn_40") = traj_40_reverse;
+paths_struct.("pivot_to_downIn_70") = traj_70_reverse;
 
 combined = [paths_struct.home_to_upOut_10; 
     paths_struct.upOut_to_downOut_10;
     paths_struct.downOut_to_downIn_10;
+    paths_struct.downIn_to_pivot_10;
+    paths_struct.pivot_to_downIn_10;
     paths_struct.downIn_to_upIn_10;
     paths_struct.upIn_to_upOut_10;
     paths_struct.("upOut_to_staging"+id+"_10");
@@ -366,17 +392,19 @@ combined = [paths_struct.home_to_upOut_10;
     paths_struct.upOut_to_home_10];
 % plotJointMotion(panda_sc, combined, env,params)
 
-paths_array = {paths_struct.home_to_upOut_10, 
-    paths_struct.upOut_to_downOut_10,
-    paths_struct.downOut_to_downIn_10,
-    paths_struct.downIn_to_upIn_10,
-    paths_struct.upIn_to_upOut_10,
-    paths_struct.("upOut_to_staging"+id+"_10"),
-    paths_struct.("staging"+id+"_to_upOut_10"),
-    paths_struct.upOut_to_upIn_10,
-    paths_struct.upIn_to_downIn_10,
-    paths_struct.downIn_to_downOut_10,
-    paths_struct.downOut_to_upOut_10,
+paths_array = {paths_struct.home_to_upOut_10; 
+    paths_struct.upOut_to_downOut_10;
+    paths_struct.downOut_to_downIn_10;
+    paths_struct.downIn_to_upIn_10;
+    paths_struct.downIn_to_pivot_10;
+    paths_struct.pivot_to_downIn_10;
+    paths_struct.upIn_to_upOut_10;
+    paths_struct.("upOut_to_staging"+id+"_10");
+    paths_struct.("staging"+id+"_to_upOut_10");
+    paths_struct.upOut_to_upIn_10;
+    paths_struct.upIn_to_downIn_10;
+    paths_struct.downIn_to_downOut_10;
+    paths_struct.downOut_to_upOut_10;
     paths_struct.upOut_to_home_10};
 
 for i =  1:numel(paths_array)
