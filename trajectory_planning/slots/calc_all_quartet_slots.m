@@ -23,31 +23,34 @@ end
 quartet_slots = readcell(quartet_slots_csv);
 valid_slots = {};
 
-% % Pre-filter slots before parallel execution
-% for i = 1:numel(quartet_slots)
-%     slot_name = quartet_slots{i};
-%     shelf = slot_name(1:2);
-% 
-% 
-% 
-% 
-%     if strcmp(slot_name, "06C20") || ... % Joint limit reached
-%             strcmp(slot_name, "04C32") || ... % Joint limit reached
-%             strcmp(slot_name, "08C42")  % Cartesian calculation fails
-%         disp("Skipping " + slot_name)
-%         continue
-%     end
-% 
-%     % Skip if already exists
-%     if checkSubstringInFilenames(save_dir, slot_name)
-%         disp("Skipping " + slot_name + " because it already exists.")
-%         continue
-%     end
-% 
-%     valid_slots{end+1} = slot_name;
-% end
+% Pre-filter slots before parallel execution
+for i = 1:numel(quartet_slots)
+    slot_name = quartet_slots{i};
+    shelf = slot_name(1:2);
 
-valid_slots{end+1} = '08C42';
+
+
+
+    if strcmp(slot_name, "06C20") || ... % Joint limit reached
+            strcmp(slot_name, "04C32") || ... % Joint limit reached
+            strcmp(slot_name, "08C42") || ... % Cartesian calculation fails
+            strcmp(slot_name, "09A30") || ... % Cartesian calculation fails
+                    strcmp(slot_name, "05C32")  % Cartesian calculation fails
+
+        disp("Skipping " + slot_name)
+        continue
+    end
+
+    % Skip if already exists
+    if checkSubstringInFilenames(save_dir, slot_name)
+        disp("Skipping " + slot_name + " because it already exists.")
+        continue
+    end
+
+    valid_slots{end+1} = slot_name;
+end
+
+% valid_slots{end+1} = '04B12';
 
 % Parallel execution
 for i = 1:numel(valid_slots)
