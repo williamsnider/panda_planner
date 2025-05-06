@@ -50,7 +50,7 @@ for i = 1:numel(quartet_slots)
     valid_slots{end+1} = slot_name;
 end
 
-% valid_slots{end+1} = '04B12';
+% valid_slots{end+1} = '08C42';
 
 % Parallel execution
 for i = 1:numel(valid_slots)
