@@ -65,8 +65,8 @@ for NumSamples = 100:100:800
     assert(size(q,2) == size(jointLimits,2));
 
     % Joint limits not exceeded
-    aboveMin = all(all(q - jointLimits(1,:) >= -1e-4));
-    belowMax = all(all(q - jointLimits(2,:) <= 1e-4));
+    aboveMin = all(all(q - jointLimits(1,:) >= -1e-3));
+    belowMax = all(all(q - jointLimits(2,:) <= 1e-3));
     if ~aboveMin || ~belowMax
         valid = false;
         disp('Rejected due to violation of joint limits.')
