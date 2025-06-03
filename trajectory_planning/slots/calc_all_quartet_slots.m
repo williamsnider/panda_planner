@@ -14,7 +14,7 @@ quartet_fname = params.CustomParametersDir+"/trajectory_planning/quartets/trajec
 save_dir = params.CustomParametersDir+"/trajectory_planning/slots/trajectories/";
 quartet_slots_csv = params.CustomParametersDir+"/trajectory_planning/slots/quartet_slots.csv";
 date_prefix = "20250506_";
-slot_dir = "20250508_manual_slots";
+slot_dir = "20250509_manual_slots";
 
 if ~exist(save_dir, 'dir')
     mkdir(save_dir);
@@ -50,34 +50,11 @@ valid_slots = {};
 %     valid_slots{end+1} = slot_name;
 % end
 % 
-valid_slots{end+1} = '04C32';
-% % valid_slots{end+1} = '05C32';
-% % valid_slots{end+1} = '06A52';
-valid_slots{end+1} = '06C20';
-% % valid_slots{end+1} = '07C46';
-% % valid_slots{end+1} = '08A18';
-% % valid_slots{end+1} = '08C42';
-% % valid_slots{end+1} = '09A18';
-% % valid_slots{end+1} = '09A30';
 
-% % valid_slots{end+1} = '00C28';
-% % valid_slots{end+1} = '01A02';
-% % valid_slots{end+1} = '01A16';
-% % valid_slots{end+1} = '01B40';
-% % valid_slots{end+1} = '02B04';
-% % valid_slots{end+1} = '03A18';
-% % valid_slots{end+1} = '03A30';
-% % valid_slots{end+1} = '03A42';
-% % valid_slots{end+1} = '03B02';
-% % valid_slots{end+1} = '07B36';
-% % valid_slots{end+1} = '08A06';
-% % valid_slots{end+1} = '08A42';
-% % valid_slots{end+1} = '09A42';
-% % valid_slots{end+1} = '09B06';
-% % valid_slots{end+1} = '09B30';
-% % valid_slots{end+1} = '09C30';
-% % valid_slots{end+1} = '10B28';
-% % valid_slots{end+1} = '10C44';
+valid_slots{end+1} = '07A42';
+valid_slots{end+1} = '12B28';
+valid_slots{end+1} = '05C08';
+valid_slots{end+1} = '10A36';
 
 
 % Parallel execution

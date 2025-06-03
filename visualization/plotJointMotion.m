@@ -50,7 +50,7 @@ if ~hasArm
     zone_color = [0,1,1];
     zone_alpha = 0.25;
     collision_color = 'b';%[0.8,0.1,0.1];
-    collision_alpha = 1.0;
+    collision_alpha = 0.25;
 
 
 
