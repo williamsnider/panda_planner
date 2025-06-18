@@ -83,7 +83,7 @@ for NumSamples = 100:100:800
 
     % Path is linear within a threshold Sample points and see how far they are
     % from line
-    DISTANCE_THRESHOLD = 0.0015;
+    DISTANCE_THRESHOLD = 0.0015;  % Adjust this for hard trajectories
     num_points = size(q, 1);
     % sample_interval = round(num_points/num_waypoints/2);  % Sample 2x frequency of waypoints
     indices = 1:round(params.num_waypoints/2):num_points; %

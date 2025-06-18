@@ -37,23 +37,26 @@ for i = 1:numel(quartet_slots)
     valid_slots{end+1} = slot_name;
 end
 
+disp(strcat("Number of slots left: ", num2str(numel(valid_slots))))
 
 
 % valid_slots{end+1} = '07C32';
 % % valid_slots{end+1} = '11A04';
-
-if gcp('nocreate')==false
-    parpool()
+p = gcp('nocreate'); 
+if ~isempty(p)
+    delete(p);
 end
+parpool('local', 12);
+
 
 % Parallel execution
-parfor i = 1:numel(valid_slots)
+for i = 1:numel(valid_slots)
     slot_name = valid_slots{i};
     disp(slot_name)
     try
         calcSlot(panda_ec, panda_sc, env, ik, slot_name, slot_dir, date_prefix, save_dir, quartet_fname, params);
     catch
-        disp(strcmp("Failed for ", slot_name))
+        disp(strcat("Failed for ", slot_name))
     end
 end
 
