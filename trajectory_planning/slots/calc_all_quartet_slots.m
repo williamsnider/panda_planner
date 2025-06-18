@@ -14,7 +14,7 @@ quartet_fname = params.CustomParametersDir+"/trajectory_planning/quartets/trajec
 save_dir = params.CustomParametersDir+"/trajectory_planning/slots/trajectories/";
 quartet_slots_csv = params.CustomParametersDir+"/trajectory_planning/slots/quartet_slots.csv";
 date_prefix = "20250618_";
-slot_dir = "20250604_manual_slots";
+slot_dir = "20250618_manual_slots";
 
 if ~exist(save_dir, 'dir')
     mkdir(save_dir);
@@ -43,7 +43,7 @@ end
 % % valid_slots{end+1} = '11A04';
 
 if gcp('nocreate')==false
-    parpool(2)
+    parpool()
 end
 
 % Parallel execution
