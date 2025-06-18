@@ -73,7 +73,7 @@ T_downOut(3,4)= T_downIn(3,4);
 
 % Check Z's 
 assert(abs(T_downOut(3,4)-T_downIn(3,4))<0.015)
-assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.021)
+assert(abs(T_upOut(3,4)-T_upIn(3,4))<0.015)  % Adjust this higher for trickier slots
 
 
 T_downIn_to_downOut = cat(3, T_downIn, T_downOut);

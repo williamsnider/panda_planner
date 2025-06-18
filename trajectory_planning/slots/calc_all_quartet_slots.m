@@ -13,8 +13,8 @@ ik.SolverParameters.MaxIterations = 1000;
 quartet_fname = params.CustomParametersDir+"/trajectory_planning/quartets/trajectories/20241009_A.mat";
 save_dir = params.CustomParametersDir+"/trajectory_planning/slots/trajectories/";
 quartet_slots_csv = params.CustomParametersDir+"/trajectory_planning/slots/quartet_slots.csv";
-date_prefix = "20250506_";
-slot_dir = "20250509_manual_slots";
+date_prefix = "20250618_";
+slot_dir = "20250604_manual_slots";
 
 if ~exist(save_dir, 'dir')
     mkdir(save_dir);
@@ -23,46 +23,38 @@ end
 quartet_slots = readcell(quartet_slots_csv);
 valid_slots = {};
 
-% % Pre-filter slots before parallel execution
-% for i = 1:numel(quartet_slots)
-%     slot_name = quartet_slots{i};
-%     shelf = slot_name(1:2);
-% 
-% 
-% 
-% 
-% %     if strcmp(slot_name, "06C20") || ... % Joint limit reached
-% %             strcmp(slot_name, "04C32") || ... % Joint limit reached
-% %             strcmp(slot_name, "08C42") || ... % Cartesian calculation fails
-% %             strcmp(slot_name, "09A30") || ... % Cartesian calculation fails
-% %                     strcmp(slot_name, "05C32")  % Cartesian calculation fails
-% % 
-% %         disp("Skipping " + slot_name)
-% %         continue
-% %     end
-% 
-%     % Skip if already exists
-%     if checkSubstringInFilenames(save_dir, slot_name)
-%         disp("Skipping " + slot_name + " because it already exists.")
-%         continue
-%     end
-% 
-%     valid_slots{end+1} = slot_name;
-% end
-% 
+% Pre-filter slots before parallel execution
+for i = 1:numel(quartet_slots)
+    slot_name = quartet_slots{i};
+    shelf = slot_name(1:2);
 
-valid_slots{end+1} = '07A42';
-valid_slots{end+1} = '12B28';
-valid_slots{end+1} = '05C08';
-valid_slots{end+1} = '10A36';
+    % Skip if already exists
+    if checkSubstringInFilenames(save_dir, slot_name)
+        disp("Skipping " + slot_name + " because it already exists.")
+        continue
+    end
 
+    valid_slots{end+1} = slot_name;
+end
+
+
+
+% valid_slots{end+1} = '07C32';
+% % valid_slots{end+1} = '11A04';
+
+if gcp('nocreate')==false
+    parpool(2)
+end
 
 % Parallel execution
-for i = 1:numel(valid_slots)
+parfor i = 1:numel(valid_slots)
     slot_name = valid_slots{i};
     disp(slot_name)
-    
-    calcSlot(panda_ec, panda_sc, env, ik, slot_name, slot_dir, date_prefix, save_dir, quartet_fname, params);
+    try
+        calcSlot(panda_ec, panda_sc, env, ik, slot_name, slot_dir, date_prefix, save_dir, quartet_fname, params);
+    catch
+        disp(strcmp("Failed for ", slot_name))
+    end
 end
 
 
