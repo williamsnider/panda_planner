@@ -23,41 +23,42 @@ end
 quartet_slots = readcell(quartet_slots_csv);
 valid_slots = {};
 
-% Pre-filter slots before parallel execution
-for i = 1:numel(quartet_slots)
-    slot_name = quartet_slots{i};
-    shelf = slot_name(1:2);
+% % Pre-filter slots before parallel execution
+% for i = 1:numel(quartet_slots)
+%     slot_name = quartet_slots{i};
+%     shelf = slot_name(1:2);
+% 
+%     % Skip if already exists
+%     if checkSubstringInFilenames(save_dir, slot_name)
+%         disp("Skipping " + slot_name + " because it already exists.")
+%         continue
+%     end
+% 
+%     valid_slots{end+1} = slot_name;
+% end
 
-    % Skip if already exists
-    if checkSubstringInFilenames(save_dir, slot_name)
-        disp("Skipping " + slot_name + " because it already exists.")
-        continue
-    end
-
-    valid_slots{end+1} = slot_name;
-end
+valid_slots{end+1} = '10C08';
 
 disp(strcat("Number of slots left: ", num2str(numel(valid_slots))))
 
 
-% valid_slots{end+1} = '07C32';
-% % valid_slots{end+1} = '11A04';
-p = gcp('nocreate'); 
-if ~isempty(p)
-    delete(p);
-end
-parpool('local', 12);
+
+% p = gcp('nocreate'); 
+% if ~isempty(p)
+%     delete(p);
+% end
+% parpool('local', 12);
 
 
 % Parallel execution
 for i = 1:numel(valid_slots)
     slot_name = valid_slots{i};
     disp(slot_name)
-    try
+%     try
         calcSlot(panda_ec, panda_sc, env, ik, slot_name, slot_dir, date_prefix, save_dir, quartet_fname, params);
-    catch
+%     catch
         disp(strcat("Failed for ", slot_name))
-    end
+%     end
 end
 
 
